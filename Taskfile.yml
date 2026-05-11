@@ -35,6 +35,17 @@ tasks:
     cmds:
       - go test ./...
 
+  extension:package:
+    desc: "Build shareable Chrome/Firefox extension packages."
+    cmds:
+      - python3 scripts/check_extensions.py
+      - python3 scripts/package_extension.py
+
+  extension:deploy:
+    desc: "Package extension and deploy to /var/www/html/shared on the VPS."
+    cmds:
+      - bash scripts/deploy_extension_share.sh {{.CLI_ARGS}}
+
   vet:
     desc: "go vet."
     cmds:

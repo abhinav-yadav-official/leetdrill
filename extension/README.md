@@ -33,6 +33,25 @@ Chrome MV3 and Firefox WebExtension companion. Main flows:
 5. Open a LeetCode problem and submit. Console should log
    `[leetdrill] submission applied`.
 
+## Build share packages
+
+```bash
+task extension:package
+```
+
+This writes Chrome/Edge and Firefox packages to `dist/extension-share/`.
+
+To publish them to the VPS share page:
+
+```bash
+task extension:deploy
+```
+
+The public page is `https://abhiy.xyz/shared/leetdrill-extension/`.
+Chrome/Edge use the zip as a developer-mode unpacked extension package.
+Firefox can open the `.xpi` link, but normal Firefox requires Mozilla signing
+before permanent install.
+
 ## Files
 
 - `manifest.json` — Chrome MV3 manifest.

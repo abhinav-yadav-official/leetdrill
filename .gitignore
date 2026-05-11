@@ -1,6 +1,7 @@
 .env
 .env.local
 bin/
+dist/
 tmp/
 *.test
 *.out
@@ -8,6 +9,7 @@ coverage.*
 .DS_Store
 web/static/app.css
 node_modules/
+__pycache__/
 .idea/
 .vscode/
 .superpowers/
