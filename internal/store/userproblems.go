@@ -98,6 +98,32 @@ ON CONFLICT (user_id, problem_id) DO NOTHING`
 	return tag.RowsAffected() > 0, nil
 }
 
+// TriageUserProblem manually adjusts the SRS state.
+func TriageUserProblem(ctx context.Context, db DBTX, userID, problemID int64, action string) error {
+	switch action {
+	case "unleech":
+		// Reset fails and put back into rotation as learning.
+		_, err := db.Exec(ctx, `
+UPDATE user_problems
+   SET total_fails = 0, status = 'learning', next_due_at = now()
+ WHERE user_id = $1 AND problem_id = $2`, userID, problemID)
+		return err
+	case "master":
+		// Skip all future reviews.
+		_, err := db.Exec(ctx, `
+UPDATE user_problems
+   SET status = 'mastered', next_due_at = NULL
+ WHERE user_id = $1 AND problem_id = $2`, userID, problemID)
+		return err
+	case "reset":
+		// Hard reset: delete the SRS row. History (attempts) remains.
+		_, err := db.Exec(ctx, `DELETE FROM user_problems WHERE user_id = $1 AND problem_id = $2`, userID, problemID)
+		return err
+	default:
+		return fmt.Errorf("unknown triage action: %s", action)
+	}
+}
+
 // timeOrNil returns nil for zero-time so we write SQL NULL.
 func timeOrNil(t time.Time) *time.Time {
 	if t.IsZero() {

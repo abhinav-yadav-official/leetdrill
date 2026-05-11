@@ -142,10 +142,12 @@ func (s *server) router() http.Handler {
 		r.Get("/problems", s.handleProblems)
 		r.Get("/problems/{slug}", s.handleProblemDetail)
 		r.Post("/problems/{id}/journal", s.handleProblemJournal)
+		r.Post("/problems/{id}/triage", s.handleProblemTriage)
 		r.Get("/patterns", s.handlePatterns)
 		r.Get("/stats", s.handleStats)
 		r.Get("/settings", s.handleSettings)
 		r.Post("/settings/cold-start", s.handleSettingsColdStart)
+		r.Post("/settings/vacation", s.handleSettingsVacation)
 	})
 
 	r.Route("/api/ext", func(r chi.Router) {
@@ -241,6 +243,12 @@ func (s *server) handleHome(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	vacation, err := store.GetVacationUntil(r.Context(), s.store.DB(), uid)
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	s.renderer.Page(w, "dashboard", web.PageData{
 		Title:   "Dashboard",
 		UserID:  uid,
@@ -249,6 +257,7 @@ func (s *server) handleHome(w http.ResponseWriter, r *http.Request) {
 			Counts:         counts,
 			RecentAttempts: recent,
 			StreakDays:     streak,
+			VacationUntil:  vacation,
 		},
 	})
 }
@@ -257,6 +266,7 @@ type dashboardPageData struct {
 	Counts         store.DashboardCounts
 	RecentAttempts []store.RecentAttempt
 	StreakDays     int
+	VacationUntil  *time.Time
 }
 
 func (s *server) handleSessionStart(w http.ResponseWriter, r *http.Request) {
@@ -473,6 +483,29 @@ func (s *server) handleProblemJournal(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("saved"))
 }
 
+func (s *server) handleProblemTriage(w http.ResponseWriter, r *http.Request) {
+	uid := auth.UserID(r.Context())
+	problemID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || problemID <= 0 {
+		http.Error(w, "bad problem id", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	action := r.FormValue("action")
+	if err := store.TriageUserProblem(r.Context(), s.store.DB(), uid, problemID, action); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ref := r.Header.Get("Referer")
+	if ref == "" {
+		ref = "/problems"
+	}
+	http.Redirect(w, r, ref, http.StatusSeeOther)
+}
+
 func (s *server) handlePatterns(w http.ResponseWriter, r *http.Request) {
 	uid := auth.UserID(r.Context())
 	patterns, err := store.ListPatternsWithStrength(r.Context(), s.store.DB(), uid)
@@ -518,6 +551,12 @@ func (s *server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	vacation, err := store.GetVacationUntil(r.Context(), s.store.DB(), uid)
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	status := "no cookies stored"
 	if len(c.SessionEnc) > 0 {
 		if c.Valid {
@@ -531,9 +570,10 @@ func (s *server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		UserID:  uid,
 		NavItem: "settings",
 		Data: settingsPageData{
-			Username:     emptyDash(c.Username),
-			CookieStatus: status,
-			Message:      r.URL.Query().Get("message"),
+			Username:      emptyDash(c.Username),
+			CookieStatus:  status,
+			VacationUntil: vacation,
+			Message:       r.URL.Query().Get("message"),
 		},
 	})
 }
@@ -542,6 +582,7 @@ type settingsPageData struct {
 	Username        string
 	CookieStatus    string
 	CookieUpdatedAt *time.Time
+	VacationUntil   *time.Time
 	Message         string
 }
 
@@ -558,6 +599,32 @@ func (s *server) handleSettingsColdStart(w http.ResponseWriter, r *http.Request)
 	}
 	msg := fmt.Sprintf("imported recent=%d authed=%d duplicates=%d unknown=%d",
 		result.RecentImported, result.AuthedImported, result.DuplicatesSkipped, result.UnknownSkipped)
+	http.Redirect(w, r, "/settings?message="+url.QueryEscape(msg), http.StatusSeeOther)
+}
+
+func (s *server) handleSettingsVacation(w http.ResponseWriter, r *http.Request) {
+	uid := auth.UserID(r.Context())
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	var until *time.Time
+	if r.FormValue("action") == "start" {
+		days, _ := strconv.Atoi(r.FormValue("days"))
+		if days <= 0 {
+			days = 7
+		}
+		t := time.Now().UTC().Add(time.Duration(days) * 24 * time.Hour)
+		until = &t
+	}
+	if err := store.SetVacationUntil(r.Context(), s.store.DB(), uid, until); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	msg := "vacation mode disabled"
+	if until != nil {
+		msg = fmt.Sprintf("vacation mode enabled until %s", until.Format("2006-01-02"))
+	}
 	http.Redirect(w, r, "/settings?message="+url.QueryEscape(msg), http.StatusSeeOther)
 }
 

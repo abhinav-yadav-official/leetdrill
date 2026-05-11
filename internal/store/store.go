@@ -70,3 +70,4 @@ func (s *Store) InTx(ctx context.Context, fn func(pgx.Tx) error) error {
 func (s *Store) DB() DBTX { return s.Pool }
 
 var ErrNotFound = errors.New("store: not found")
+var ErrOnVacation = errors.New("store: user is on vacation")

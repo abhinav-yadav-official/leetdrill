@@ -1,5 +1,12 @@
 {{define "content"}}
 <div class="flex flex-col gap-5">
+  {{if .Data.VacationUntil}}
+    <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+      <span class="font-bold">Vacation Mode Active.</span> Due reviews are paused until {{fmtTime .Data.VacationUntil}}.
+      <a href="/settings" class="ml-2 font-medium underline">Disable in Settings</a>
+    </div>
+  {{end}}
+
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>

@@ -20,6 +20,28 @@
     <div class="rounded-lg border border-zinc-200 bg-white p-4"><div class="text-xs uppercase text-zinc-500">Next due</div><div class="mt-2 text-sm font-medium">{{fmtTime .Data.State.NextDueAt}}</div></div>
   </div>
 
+  <section class="rounded-lg border border-zinc-200 bg-white p-4">
+    <h2 class="font-medium">Actions</h2>
+    <div class="mt-4 flex flex-wrap gap-2">
+      {{if eq .Data.State.Status "leech"}}
+        <form method="post" action="/problems/{{.Data.Problem.ID}}/triage">
+          <input type="hidden" name="action" value="unleech">
+          <button class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">Un-leech</button>
+        </form>
+      {{end}}
+      {{if ne .Data.State.Status "mastered"}}
+        <form method="post" action="/problems/{{.Data.Problem.ID}}/triage">
+          <input type="hidden" name="action" value="master">
+          <button class="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50">Mark Mastered</button>
+        </form>
+      {{end}}
+      <form method="post" action="/problems/{{.Data.Problem.ID}}/triage" onsubmit="return confirm('Reset SRS state for this problem? History will remain but scheduling will restart.')">
+        <input type="hidden" name="action" value="reset">
+        <button class="rounded-md border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50">Reset SRS</button>
+      </form>
+    </div>
+  </section>
+
   <section class="rounded-lg border border-zinc-200 bg-white">
     <div class="border-b border-zinc-200 px-4 py-3">
       <h2 class="font-medium">Attempt history</h2>

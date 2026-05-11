@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -65,4 +66,18 @@ ORDER BY id`
 		out = append(out, u)
 	}
 	return out, rows.Err()
+}
+
+func GetVacationUntil(ctx context.Context, db DBTX, userID int64) (*time.Time, error) {
+	var until *time.Time
+	err := db.QueryRow(ctx, `SELECT vacation_until FROM users WHERE id = $1`, userID).Scan(&until)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return until, err
+}
+
+func SetVacationUntil(ctx context.Context, db DBTX, userID int64, until *time.Time) error {
+	_, err := db.Exec(ctx, `UPDATE users SET vacation_until = $2 WHERE id = $1`, userID, until)
+	return err
 }

@@ -160,13 +160,15 @@ func sessionNeedsProblemBuild(s Session) bool {
 
 func pickDueProblemIDs(ctx context.Context, db DBTX, userID int64, n int) ([]int64, error) {
 	const q = `
-SELECT problem_id
-FROM user_problems
-WHERE user_id = $1
-  AND status NOT IN ('leech','new','mastered')
-  AND next_due_at IS NOT NULL
-  AND next_due_at <= now() + interval '1 day'
-ORDER BY next_due_at ASC
+SELECT up.problem_id
+FROM user_problems up
+JOIN users u ON u.id = up.user_id
+WHERE up.user_id = $1
+  AND (u.vacation_until IS NULL OR u.vacation_until <= now())
+  AND up.status NOT IN ('leech','new','mastered')
+  AND up.next_due_at IS NOT NULL
+  AND up.next_due_at <= now() + interval '1 day'
+ORDER BY up.next_due_at ASC
 LIMIT $2`
 	rows, err := db.Query(ctx, q, userID, n)
 	if err != nil {

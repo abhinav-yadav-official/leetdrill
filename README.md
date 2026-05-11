@@ -2,9 +2,6 @@
 
 Spaced-repetition layer on top of LeetCode. Web app + Chrome extension.
 
-Phase 5 cold-start/sync scaffold. See `leetdrill-claude.md` for phase breakdown and
-session notes.
-
 ## Stack
 
 Go 1.22 + chi + pgx + Postgres + htmx + Alpine + Tailwind. Manifest V3 extension.
