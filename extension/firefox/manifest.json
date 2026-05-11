@@ -1,19 +1,21 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "LeetDrill Companion",
   "short_name": "LeetDrill",
   "version": "0.1.0",
   "description": "Spaced-repetition layer on top of LeetCode. Captures submissions and feeds them to your LeetDrill backend.",
-  "permissions": ["alarms", "cookies", "storage"],
-  "host_permissions": [
+  "permissions": [
+    "alarms",
+    "cookies",
+    "storage",
+    "tabs",
     "https://leetcode.com/*",
     "https://abhiy.xyz/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
   ],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "scripts": ["compat.js", "background.js"]
   },
   "content_scripts": [
     {
@@ -22,18 +24,19 @@
       "run_at": "document_start"
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": ["inject.js"],
-      "matches": ["https://leetcode.com/*"]
-    }
-  ],
-  "action": {
+  "web_accessible_resources": ["inject.js"],
+  "browser_action": {
     "default_popup": "popup.html",
     "default_title": "LeetDrill"
   },
   "options_ui": {
     "page": "options.html",
     "open_in_tab": false
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "leetdrill@abhiy.xyz",
+      "strict_min_version": "109.0"
+    }
   }
 }
