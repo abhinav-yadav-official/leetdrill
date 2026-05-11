@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>LeetDrill — Options</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 420px;
+        margin: 1.5rem auto;
+        padding: 0 1rem;
+      }
+      h1 { font-size: 16px; }
+      label { display: block; margin: 12px 0 4px; font-size: 13px; }
+      input {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        font-size: 13px;
+        box-sizing: border-box;
+      }
+      button {
+        margin-top: 12px;
+        padding: 8px 12px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .hint { font-size: 11px; color: #64748b; margin-top: 4px; }
+      .status { margin-top: 12px; font-size: 13px; }
+      .ok { color: #15803d; }
+      .bad { color: #b91c1c; }
+    </style>
+  </head>
+  <body>
+    <h1>LeetDrill connection</h1>
+    <label for="backend">Backend URL</label>
+    <input id="backend" type="text" placeholder="http://localhost:8080" />
+
+    <label for="email">Email (multi-user mode)</label>
+    <input id="email" type="email" placeholder="optional in single-user mode" />
+
+    <label for="password">Password (multi-user mode)</label>
+    <input id="password" type="password" />
+
+    <button id="connect">connect</button>
+    <button id="save">save url only</button>
+
+    <div id="status" class="status"></div>
+    <p class="hint">
+      Single-user backend: leave email/password blank and click connect.
+      The backend hands out a long-lived token automatically.
+    </p>
+
+    <script src="options.js"></script>
+  </body>
+</html>

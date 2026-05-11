@@ -19,6 +19,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"leetdrill/internal/auth"
+	"leetdrill/internal/leetcode"
+	"leetdrill/internal/models"
 	"leetdrill/internal/store"
 	"leetdrill/internal/vault"
 )
@@ -128,6 +130,8 @@ func (s *server) router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.authmw.RequireExtToken)
 			r.Post("/cookies", s.handleExtCookies)
+			r.Post("/submission", s.handleExtSubmission)
+			r.Get("/next-problem", s.handleExtNextProblem)
 		})
 	})
 
@@ -310,6 +314,125 @@ func (s *server) handleExtCookies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+type submissionReq struct {
+	Slug             string `json:"slug"`
+	Verdict          string `json:"verdict"`          // human form: "Accepted", "Wrong Answer", ...
+	SubmissionCount  int    `json:"submission_count"` // submissions in this session up to and including this one
+	TimeTakenSec     int    `json:"time_taken_sec"`   // wall-clock since page-open
+	RuntimeMs        *int   `json:"runtime_ms,omitempty"`
+	MemoryKB         *int   `json:"memory_kb,omitempty"`
+	Language         string `json:"language,omitempty"`
+	Code             string `json:"code,omitempty"`
+	LeetcodeSubmID   string `json:"leetcode_submission_id,omitempty"`
+	StartedAtUnix    int64  `json:"started_at_unix,omitempty"`
+	CompletedAtUnix  int64  `json:"completed_at_unix,omitempty"`
+}
+
+type submissionResp struct {
+	AttemptID   int64  `json:"attempt_id"`
+	Rating      string `json:"derived_rating"`
+	Status      string `json:"status"`
+	NextDueAt   string `json:"next_due_at,omitempty"`
+	IntervalDay int    `json:"interval_days"`
+}
+
+func (s *server) handleExtSubmission(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxReqBody))
+	if err != nil {
+		http.Error(w, "read body", http.StatusBadRequest)
+		return
+	}
+	var req submissionReq
+	if err := json.Unmarshal(body, &req); err != nil || req.Slug == "" || req.Verdict == "" {
+		http.Error(w, "expected {slug, verdict, submission_count, time_taken_sec}", http.StatusBadRequest)
+		return
+	}
+	if req.SubmissionCount < 1 {
+		req.SubmissionCount = 1
+	}
+
+	uid := auth.UserID(r.Context())
+	problem, err := store.GetProblemBySlug(r.Context(), s.store.DB(), req.Slug)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.Error(w, "unknown slug — run ingest first", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	verdict := leetcode.NormalizeVerdict(req.Verdict)
+
+	in := store.ApplyInput{
+		UserID:          uid,
+		ProblemID:       problem.ID,
+		Difficulty:      problem.Difficulty,
+		Verdict:         verdict,
+		SubmissionCount: req.SubmissionCount,
+		TimeTakenSec:    req.TimeTakenSec,
+		RuntimeMs:       req.RuntimeMs,
+		MemoryKB:        req.MemoryKB,
+		Language:        req.Language,
+		Code:            req.Code,
+		LeetcodeSubmID:  req.LeetcodeSubmID,
+		StartedAt:       unixOrZero(req.StartedAtUnix),
+		CompletedAt:     unixOrZero(req.CompletedAtUnix),
+	}
+	res, err := s.store.Apply(r.Context(), in)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := submissionResp{
+		AttemptID:   res.AttemptID,
+		Rating:      string(res.Rating),
+		Status:      string(res.UserProblem.Status),
+		IntervalDay: res.UserProblem.IntervalDays,
+	}
+	if res.UserProblem.NextDueAt != nil {
+		resp.NextDueAt = res.UserProblem.NextDueAt.UTC().Format(time.RFC3339)
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+type nextProblemResp struct {
+	Slug       string             `json:"slug"`
+	URL        string             `json:"url"`
+	Title      string             `json:"title"`
+	Difficulty models.Difficulty  `json:"difficulty"`
+	Reason     string             `json:"reason"`
+}
+
+func (s *server) handleExtNextProblem(w http.ResponseWriter, r *http.Request) {
+	uid := auth.UserID(r.Context())
+	np, err := store.SelectNextDue(r.Context(), s.store.DB(), uid)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.Error(w, "no problems available — run ingest", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, nextProblemResp{
+		Slug:       np.Slug,
+		URL:        np.URL,
+		Title:      np.Title,
+		Difficulty: np.Difficulty,
+		Reason:     np.Reason,
+	})
+}
+
+func unixOrZero(v int64) time.Time {
+	if v <= 0 {
+		return time.Time{}
+	}
+	return time.Unix(v, 0).UTC()
 }
 
 // ---- helpers ----

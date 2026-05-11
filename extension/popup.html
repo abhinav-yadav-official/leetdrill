@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>LeetDrill</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 12px;
+        width: 280px;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      h1 { font-size: 14px; margin: 0 0 8px; }
+      .status {
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        background: #1e293b;
+      }
+      .ok { color: #4ade80; }
+      .bad { color: #f87171; }
+      .card {
+        background: #1e293b;
+        padding: 8px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        font-size: 12px;
+      }
+      .card .title { font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+      .badge {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 999px;
+        font-size: 10px;
+        background: #334155;
+      }
+      .badge.review { background: #0ea5e9; color: #0c1322; }
+      .badge.new { background: #f59e0b; color: #1f1300; }
+      button {
+        width: 100%;
+        padding: 8px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      button:disabled { background: #334155; cursor: default; }
+      .row { display: flex; gap: 8px; margin-top: 8px; }
+      .row button { flex: 1; }
+      a { color: #93c5fd; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <h1>LeetDrill</h1>
+    <div id="status" class="status">checking…</div>
+    <div id="next" class="card" style="display:none;">
+      <div class="title" id="nextTitle"></div>
+      <div>
+        <span class="badge" id="nextDifficulty"></span>
+        <span class="badge" id="nextReason"></span>
+      </div>
+    </div>
+    <button id="open" disabled>open next problem</button>
+    <div class="row">
+      <button id="sync">sync cookies</button>
+      <button id="options">options</button>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

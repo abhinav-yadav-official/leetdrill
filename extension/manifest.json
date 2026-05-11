@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "LeetDrill Companion",
+  "short_name": "LeetDrill",
+  "version": "0.1.0",
+  "description": "Spaced-repetition layer on top of LeetCode. Captures submissions and feeds them to your LeetDrill backend.",
+  "permissions": ["cookies", "storage"],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/problems/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["https://leetcode.com/*"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LeetDrill"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
