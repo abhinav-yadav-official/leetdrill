@@ -124,8 +124,8 @@ func TestSettingsPageIncludesExtensionPanel(t *testing.T) {
 		UserID:  7,
 		NavItem: "settings",
 		Data: map[string]string{
-			"Username":      "abhinav-yadav-official",
-			"CookieStatus":  "cookies stored and valid",
+			"Username":        "abhinav-yadav-official",
+			"CookieStatus":    "cookies stored and valid",
 			"CookieUpdatedAt": "",
 		},
 	})
@@ -138,6 +138,43 @@ func TestSettingsPageIncludesExtensionPanel(t *testing.T) {
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("rendered settings missing extension panel %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestProblemsPageIncludesPaginationControls(t *testing.T) {
+	r, err := NewRendererWithBasePath("/leetdrill")
+	if err != nil {
+		t.Fatalf("NewRendererWithBasePath() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	r.Page(rec, "problems", PageData{
+		Title:   "Problems",
+		UserID:  7,
+		NavItem: "problems",
+		Data: map[string]any{
+			"Filter":   "due",
+			"Problems": []any{},
+			"Page":     2,
+			"Start":    101,
+			"End":      200,
+			"PrevURL":  "/leetdrill/problems?filter=due&page=1",
+			"NextURL":  "/leetdrill/problems?filter=due&page=3",
+			"HasPrev":  true,
+			"HasNext":  true,
+		},
+	})
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`Page 2`,
+		`101-200`,
+		`href="/leetdrill/problems?filter=due&amp;page=1"`,
+		`href="/leetdrill/problems?filter=due&amp;page=3"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered problems missing pagination %q:\n%s", want, body)
 		}
 	}
 }

@@ -588,22 +588,68 @@ func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session
 func (s *server) handleProblems(w http.ResponseWriter, r *http.Request) {
 	uid := auth.UserID(r.Context())
 	filter := r.URL.Query().Get("filter")
-	items, err := store.ListProblemsForUser(r.Context(), s.store.DB(), uid, filter, 100, 0)
+	page := parsePage(r.URL.Query().Get("page"))
+	const pageSize = 100
+	offset := (page - 1) * pageSize
+	items, err := store.ListProblemsForUser(r.Context(), s.store.DB(), uid, filter, pageSize, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	start := 0
+	end := 0
+	if len(items) > 0 {
+		start = offset + 1
+		end = offset + len(items)
 	}
 	s.page(w, "problems", web.PageData{
 		Title:   "Problems",
 		UserID:  uid,
 		NavItem: "problems",
-		Data:    problemsPageData{Filter: filter, Problems: items},
+		Data: problemsPageData{
+			Filter:   filter,
+			Problems: items,
+			Page:     page,
+			Start:    start,
+			End:      end,
+			HasPrev:  page > 1,
+			HasNext:  len(items) == pageSize,
+			PrevURL:  problemPageURL(s.basePath, filter, page-1),
+			NextURL:  problemPageURL(s.basePath, filter, page+1),
+		},
 	})
 }
 
 type problemsPageData struct {
 	Filter   string
 	Problems []store.ProblemListItem
+	Page     int
+	Start    int
+	End      int
+	HasPrev  bool
+	HasNext  bool
+	PrevURL  string
+	NextURL  string
+}
+
+func parsePage(raw string) int {
+	page, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || page < 1 {
+		return 1
+	}
+	return page
+}
+
+func problemPageURL(basePath, filter string, page int) string {
+	if page < 1 {
+		page = 1
+	}
+	q := url.Values{}
+	if filter != "" {
+		q.Set("filter", filter)
+	}
+	q.Set("page", strconv.Itoa(page))
+	return web.AppPath(basePath, "/problems") + "?" + q.Encode()
 }
 
 func (s *server) handleProblemDetail(w http.ResponseWriter, r *http.Request) {

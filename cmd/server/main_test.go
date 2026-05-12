@@ -91,3 +91,36 @@ func TestValidateSignupForm(t *testing.T) {
 		})
 	}
 }
+
+func TestParsePage(t *testing.T) {
+	tests := []struct {
+		raw  string
+		want int
+	}{
+		{"", 1},
+		{"0", 1},
+		{"-2", 1},
+		{"abc", 1},
+		{"3", 3},
+	}
+
+	for _, tt := range tests {
+		if got := parsePage(tt.raw); got != tt.want {
+			t.Fatalf("parsePage(%q) = %d, want %d", tt.raw, got, tt.want)
+		}
+	}
+}
+
+func TestProblemPageURLPreservesFilterAndBasePath(t *testing.T) {
+	got := problemPageURL("/leetdrill", "due", 2)
+	want := "/leetdrill/problems?filter=due&page=2"
+	if got != want {
+		t.Fatalf("problemPageURL() = %q, want %q", got, want)
+	}
+
+	got = problemPageURL("", "", 1)
+	want = "/problems?page=1"
+	if got != want {
+		t.Fatalf("problemPageURL() = %q, want %q", got, want)
+	}
+}
