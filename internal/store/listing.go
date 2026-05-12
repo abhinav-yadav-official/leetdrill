@@ -16,6 +16,7 @@ import (
 type ProblemListItem struct {
 	ProblemID     int64
 	Slug          string
+	LeetcodeID    string
 	Title         string
 	Difficulty    models.Difficulty
 	URL           string
@@ -38,19 +39,10 @@ func ListProblemsForUser(ctx context.Context, db DBTX, userID int64, filter stri
 		offset = 0
 	}
 
-	where := ""
-	switch filter {
-	case "due":
-		where = `WHERE up.next_due_at IS NOT NULL AND up.next_due_at <= now()
-		         AND up.status NOT IN ('leech','new','mastered')`
-	case "learning", "review", "mastered", "leech":
-		where = fmt.Sprintf(`WHERE up.status = '%s'`, filter)
-	case "new":
-		where = `WHERE up.user_id IS NULL`
-	}
+	where := problemFilterWhere(filter)
 
 	q := `
-SELECT p.id, p.leetcode_slug, p.title, p.difficulty, p.url, p.topic_tags,
+SELECT p.id, p.leetcode_slug, COALESCE(p.leetcode_frontend_id, ''), p.title, p.difficulty, p.url, p.topic_tags,
        COALESCE(up.status, 'new') AS status,
        up.next_due_at, COALESCE(up.interval_days, 0),
        COALESCE(up.streak, 0), COALESCE(up.total_attempts, 0),
@@ -76,7 +68,7 @@ LIMIT $2 OFFSET $3`
 		var tags []byte
 		var diff, status string
 		if err := rows.Scan(
-			&r.ProblemID, &r.Slug, &r.Title, &diff, &r.URL, &tags,
+			&r.ProblemID, &r.Slug, &r.LeetcodeID, &r.Title, &diff, &r.URL, &tags,
 			&status, &r.NextDueAt, &r.IntervalDays, &r.Streak, &r.TotalAttempts, &r.TotalFails,
 		); err != nil {
 			return nil, fmt.Errorf("scan problem: %w", err)
@@ -89,6 +81,34 @@ LIMIT $2 OFFSET $3`
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+func CountProblemsForUser(ctx context.Context, db DBTX, userID int64, filter string) (int, error) {
+	q := `
+SELECT COUNT(*)
+FROM problems p
+LEFT JOIN user_problems up
+  ON up.user_id = $1 AND up.problem_id = p.id
+` + problemFilterWhere(filter)
+	var count int
+	if err := db.QueryRow(ctx, q, userID).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count problems: %w", err)
+	}
+	return count, nil
+}
+
+func problemFilterWhere(filter string) string {
+	switch filter {
+	case "due":
+		return `WHERE up.next_due_at IS NOT NULL AND up.next_due_at <= now()
+		         AND up.status NOT IN ('leech','new','mastered')`
+	case "learning", "review", "mastered", "leech":
+		return fmt.Sprintf(`WHERE up.status = '%s'`, filter)
+	case "new":
+		return `WHERE up.user_id IS NULL`
+	default:
+		return ""
+	}
 }
 
 // ProblemDetail bundles a problem with the user's SRS state and history.
@@ -172,14 +192,14 @@ UPDATE attempts
 
 // PatternStrength is the aggregate per-pattern signal shown in the patterns view.
 type PatternStrength struct {
-	PatternID    int64
-	Slug         string
-	Name         string
-	TotalProblems int    // problems carrying this pattern
-	UserAttempts int    // attempts on problems carrying this pattern
-	CleanSolves  int    // attempts with derived_rating IN ('normal','strong')
-	Failures     int    // derived_rating = 'failed'
-	StrengthPct  int    // 0-100, computed in SQL
+	PatternID     int64
+	Slug          string
+	Name          string
+	TotalProblems int // problems carrying this pattern
+	UserAttempts  int // attempts on problems carrying this pattern
+	CleanSolves   int // attempts with derived_rating IN ('normal','strong')
+	Failures      int // derived_rating = 'failed'
+	StrengthPct   int // 0-100, computed in SQL
 }
 
 func ListPatternsWithStrength(ctx context.Context, db DBTX, userID int64) ([]PatternStrength, error) {

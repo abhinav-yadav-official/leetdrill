@@ -1,7 +1,10 @@
 {{define "problem_row"}}
 <tr class="hover:bg-zinc-50">
   <td class="px-4 py-3">
-    <a class="font-medium text-zinc-950 hover:underline" href="{{appPath "/problems"}}/{{.Slug}}">{{.Title}}</a>
+    <div class="flex items-baseline gap-2">
+      {{if .LeetcodeID}}<span class="font-mono text-xs text-zinc-500">#{{.LeetcodeID}}</span>{{end}}
+      <a class="font-medium text-zinc-950 hover:underline" href="{{appPath "/problems"}}/{{.Slug}}">{{.Title}}</a>
+    </div>
     <div class="mt-1 flex flex-wrap gap-1">
       {{range .Topics}}<span class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600">{{.Name}}</span>{{end}}
     </div>

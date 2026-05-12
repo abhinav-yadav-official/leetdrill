@@ -590,6 +590,15 @@ func (s *server) handleProblems(w http.ResponseWriter, r *http.Request) {
 	filter := r.URL.Query().Get("filter")
 	page := parsePage(r.URL.Query().Get("page"))
 	const pageSize = 100
+	total, err := store.CountProblemsForUser(r.Context(), s.store.DB(), uid, filter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	totalPageCount := totalPages(total, pageSize)
+	if page > totalPageCount {
+		page = totalPageCount
+	}
 	offset := (page - 1) * pageSize
 	items, err := store.ListProblemsForUser(r.Context(), s.store.DB(), uid, filter, pageSize, offset)
 	if err != nil {
@@ -607,29 +616,43 @@ func (s *server) handleProblems(w http.ResponseWriter, r *http.Request) {
 		UserID:  uid,
 		NavItem: "problems",
 		Data: problemsPageData{
-			Filter:   filter,
-			Problems: items,
-			Page:     page,
-			Start:    start,
-			End:      end,
-			HasPrev:  page > 1,
-			HasNext:  len(items) == pageSize,
-			PrevURL:  problemPageURL(s.basePath, filter, page-1),
-			NextURL:  problemPageURL(s.basePath, filter, page+1),
+			Filter:     filter,
+			Problems:   items,
+			Page:       page,
+			TotalPages: totalPageCount,
+			TotalCount: total,
+			Start:      start,
+			End:        end,
+			HasPrev:    page > 1,
+			HasNext:    page < totalPageCount,
+			PrevURL:    problemPageURL(s.basePath, filter, page-1),
+			NextURL:    problemPageURL(s.basePath, filter, page+1),
 		},
 	})
 }
 
 type problemsPageData struct {
-	Filter   string
-	Problems []store.ProblemListItem
-	Page     int
-	Start    int
-	End      int
-	HasPrev  bool
-	HasNext  bool
-	PrevURL  string
-	NextURL  string
+	Filter     string
+	Problems   []store.ProblemListItem
+	Page       int
+	TotalPages int
+	TotalCount int
+	Start      int
+	End        int
+	HasPrev    bool
+	HasNext    bool
+	PrevURL    string
+	NextURL    string
+}
+
+func totalPages(total, pageSize int) int {
+	if pageSize <= 0 {
+		pageSize = 100
+	}
+	if total <= 0 {
+		return 1
+	}
+	return (total + pageSize - 1) / pageSize
 }
 
 func parsePage(raw string) int {

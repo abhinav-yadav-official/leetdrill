@@ -21,7 +21,7 @@
   </div>
   <div class="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
     <div class="text-zinc-600">
-      Page {{.Data.Page}}{{if .Data.Start}} · {{.Data.Start}}-{{.Data.End}}{{end}}
+      Page {{.Data.Page}} of {{.Data.TotalPages}}{{if .Data.Start}} · {{.Data.Start}}-{{.Data.End}} of {{.Data.TotalCount}} problems{{else}} · 0 of {{.Data.TotalCount}} problems{{end}}
     </div>
     <div class="flex gap-2">
       {{if .Data.HasPrev}}

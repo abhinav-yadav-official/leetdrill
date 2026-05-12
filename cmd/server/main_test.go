@@ -124,3 +124,22 @@ func TestProblemPageURLPreservesFilterAndBasePath(t *testing.T) {
 		t.Fatalf("problemPageURL() = %q, want %q", got, want)
 	}
 }
+
+func TestTotalPages(t *testing.T) {
+	tests := []struct {
+		total    int
+		pageSize int
+		want     int
+	}{
+		{total: 0, pageSize: 100, want: 1},
+		{total: 1, pageSize: 100, want: 1},
+		{total: 100, pageSize: 100, want: 1},
+		{total: 101, pageSize: 100, want: 2},
+	}
+
+	for _, tt := range tests {
+		if got := totalPages(tt.total, tt.pageSize); got != tt.want {
+			t.Fatalf("totalPages(%d, %d) = %d, want %d", tt.total, tt.pageSize, got, tt.want)
+		}
+	}
+}
