@@ -239,6 +239,41 @@ UPDATE sessions
 	return tag.RowsAffected() > 0, nil
 }
 
+// ReconcileSessionCompletions marks session problems complete when an AC
+// attempt was captured after the session started. This repairs missed htmx
+// polls and lets a plain Today page reload reflect extension-submitted solves.
+func ReconcileSessionCompletions(ctx context.Context, db DBTX, userID, sessionID int64) (bool, error) {
+	const q = `
+WITH missing AS (
+  SELECT s.id, jsonb_agg(DISTINCT a.problem_id) AS problem_ids
+  FROM sessions s
+  JOIN attempts a
+    ON a.user_id = s.user_id
+   AND a.completed_at >= s.started_at
+   AND a.verdict = 'AC'
+   AND s.problem_ids @> to_jsonb(a.problem_id)
+   AND NOT (s.completed_problem_ids @> to_jsonb(a.problem_id))
+  WHERE s.user_id = $1
+    AND s.id = $2
+  GROUP BY s.id
+)
+UPDATE sessions s
+   SET completed_problem_ids = s.completed_problem_ids || missing.problem_ids,
+       completed_at = CASE
+         WHEN jsonb_array_length(s.completed_problem_ids || missing.problem_ids)
+              >= jsonb_array_length(s.problem_ids)
+           THEN now()
+         ELSE s.completed_at
+       END
+  FROM missing
+ WHERE s.id = missing.id`
+	tag, err := db.Exec(ctx, q, userID, sessionID)
+	if err != nil {
+		return false, fmt.Errorf("reconcile session completions: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
 // SessionCurrent returns the current problem id in a session (first in
 // problem_ids not in completed_problem_ids), or 0 if the session is done.
 func SessionCurrent(ctx context.Context, db DBTX, sessionID int64) (int64, error) {

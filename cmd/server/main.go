@@ -457,6 +457,16 @@ func (s *server) handleSessionToday(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if changed, err := store.ReconcileSessionCompletions(r.Context(), s.store.DB(), uid, sess.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if changed {
+		sess, err = store.GetSession(r.Context(), s.store.DB(), uid, sess.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 	card, err := s.sessionCard(r.Context(), uid, sess)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -491,26 +501,10 @@ func (s *server) handleSessionNext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check all uncompleted problems for new verdicts
-	completedMap := make(map[int64]bool)
-	for _, id := range sess.CompletedProblemIDs {
-		completedMap[id] = true
-	}
-
-	changed := false
-	for _, pid := range sess.ProblemIDs {
-		if completedMap[pid] {
-			continue
-		}
-		attempt, err := store.LatestAttemptSince(r.Context(), s.store.DB(), uid, pid, sess.StartedAt)
-		if err == nil && attempt.Found && attempt.Verdict == "AC" {
-			if _, err := store.MarkProblemCompleted(r.Context(), s.store.DB(), sess.ID, pid); err == nil {
-				changed = true
-			}
-		}
-	}
-
-	if changed {
+	if changed, err := store.ReconcileSessionCompletions(r.Context(), s.store.DB(), uid, sess.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if changed {
 		sess, err = store.GetSession(r.Context(), s.store.DB(), uid, sessionID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
