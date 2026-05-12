@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "LeetDrill Companion",
   "short_name": "LeetDrill",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Spaced-repetition layer on top of LeetCode. Captures submissions and feeds them to your LeetDrill backend.",
   "permissions": [
     "alarms",
