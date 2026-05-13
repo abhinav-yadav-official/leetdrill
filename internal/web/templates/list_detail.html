@@ -10,7 +10,6 @@
       <label class="flex flex-col gap-1 text-xs font-medium text-zinc-500">
         List
         <select name="list" class="min-w-60 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900" onchange="if (this.value) window.location.href = this.value">
-          <option value="{{appPath "/lists"}}" {{if eq .Data.SelectedSlug ""}}selected{{end}}>LeetCode All</option>
           {{range .Data.Lists}}
             <option value="{{appPath (printf "/lists/%s" .Slug)}}" {{if eq $.Data.SelectedSlug .Slug}}selected{{end}}>{{.Name}}</option>
           {{end}}
@@ -25,18 +24,18 @@
   <div class="flex flex-col gap-2">
     {{range .Data.Sections}}
     <details class="group overflow-hidden rounded-lg border border-zinc-200 bg-white">
-      <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-3 select-none hover:bg-zinc-50">
-        <div class="flex items-center gap-3">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 select-none hover:bg-zinc-50">
+        <div class="flex min-w-0 items-center gap-3">
           <svg class="h-4 w-4 shrink-0 text-zinc-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
           </svg>
-          <span class="font-medium text-zinc-900">{{.Name}}</span>
+          <span class="truncate font-medium text-zinc-900">{{.Name}}</span>
         </div>
-        <div class="flex items-center gap-3">
-          <div class="hidden sm:block h-1.5 w-24 overflow-hidden rounded-full bg-zinc-100">
+        <div class="flex shrink-0 items-center gap-3">
+          <div class="hidden h-1.5 w-24 overflow-hidden rounded-full bg-zinc-100 sm:block">
             <div class="h-full rounded-full bg-emerald-500 transition-all" style="width: {{progressPct .SolvedCount .TotalCount}}%"></div>
           </div>
-          <span class="text-xs font-medium text-zinc-500">{{.SolvedCount}}<span class="text-zinc-300">/</span>{{.TotalCount}}</span>
+          <span class="w-14 text-right text-xs font-medium tabular-nums text-zinc-500">{{.SolvedCount}}<span class="text-zinc-300">/</span>{{.TotalCount}}</span>
         </div>
       </summary>
       <div class="border-t border-zinc-100">

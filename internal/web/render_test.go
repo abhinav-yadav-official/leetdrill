@@ -374,7 +374,7 @@ func TestPatternsPageLinksToPatternFilteredProblems(t *testing.T) {
 	}
 }
 
-func TestListsPageShowsListSelectorWithAllDefault(t *testing.T) {
+func TestListsPageShowsListSelectorWithCuratedDefault(t *testing.T) {
 	r, err := NewRendererWithBasePath("/leetdrill")
 	if err != nil {
 		t.Fatalf("NewRendererWithBasePath() error = %v", err)
@@ -387,13 +387,13 @@ func TestListsPageShowsListSelectorWithAllDefault(t *testing.T) {
 		NavItem: "lists",
 		Data: map[string]any{
 			"List": map[string]any{
-				"Slug":        "",
-				"Name":        "LeetCode All",
-				"Description": "All imported LeetCode problems.",
-				"TotalItems":  2400,
-				"SolvedItems": 42,
+				"Slug":        "blind-75",
+				"Name":        "Blind 75",
+				"Description": "Core interview problems.",
+				"TotalItems":  75,
+				"SolvedItems": 12,
 			},
-			"SelectedSlug": "",
+			"SelectedSlug": "blind-75",
 			"Lists": []map[string]any{{
 				"Slug":        "blind-75",
 				"Name":        "Blind 75",
@@ -417,15 +417,21 @@ func TestListsPageShowsListSelectorWithAllDefault(t *testing.T) {
 	body := rec.Body.String()
 	for _, want := range []string{
 		`name="list"`,
-		`value="/leetdrill/lists" selected>LeetCode All</option>`,
-		`value="/leetdrill/lists/blind-75"`,
-		`LeetCode All`,
+		`value="/leetdrill/lists/blind-75" selected`,
 		`Blind 75`,
-		`42 solved · 2400 problems`,
+		`12 solved · 75 problems`,
 		`href="/leetdrill/problems/two-sum"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("rendered lists page missing selector fragment %q:\n%s", want, body)
+		}
+	}
+	for _, unwanted := range []string{
+		`value="/leetdrill/lists"`,
+		`>LeetCode All</option>`,
+	} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("rendered lists page contains removed selector fragment %q:\n%s", unwanted, body)
 		}
 	}
 }
@@ -469,6 +475,11 @@ func TestListDetailShowsProblemOrderPosition(t *testing.T) {
 					"Status":     "new",
 					"Topics":     []any{},
 				}},
+			}, {
+				"Name":        "Dynamic Programming",
+				"SolvedCount": 12,
+				"TotalCount":  150,
+				"Problems":    []map[string]any{},
 			}},
 		},
 	})
@@ -480,6 +491,7 @@ func TestListDetailShowsProblemOrderPosition(t *testing.T) {
 		`Blind 75`,
 		`#1`,
 		`Arrays`,
+		`class="w-14 text-right text-xs font-medium tabular-nums text-zinc-500"`,
 		`href="/leetdrill/problems/two-sum"`,
 	} {
 		if !strings.Contains(body, want) {

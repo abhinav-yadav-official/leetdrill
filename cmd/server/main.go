@@ -1488,43 +1488,7 @@ func (s *server) handleProblems(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) handleLists(w http.ResponseWriter, r *http.Request) {
-	uid := auth.UserID(r.Context())
-	lists, err := store.ListCuratedLists(r.Context(), s.store.DB(), uid)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	total, err := store.CountProblemsForUser(r.Context(), s.store.DB(), uid, store.ProblemFilters{})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	solved, err := store.CountProblemsForUser(r.Context(), s.store.DB(), uid, store.ProblemFilters{State: "solved"})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	problems, err := store.ListAllLeetcodeProblems(r.Context(), s.store.DB(), uid)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	s.page(w, "lists", web.PageData{
-		Title:   "Lists",
-		UserID:  uid,
-		NavItem: "lists",
-		Data: listDetailPageData{
-			List: store.CuratedList{
-				Name:        "LeetCode All",
-				Description: "All imported LeetCode problems, ordered by LeetCode number.",
-				TotalItems:  total,
-				SolvedItems: solved,
-			},
-			Lists:        lists,
-			SelectedSlug: "",
-			Problems:     problems,
-		},
-	})
+	http.Redirect(w, r, web.AppPath(s.basePath, "/lists/blind-75"), http.StatusFound)
 }
 
 func (s *server) handleListDetail(w http.ResponseWriter, r *http.Request) {
@@ -1573,8 +1537,7 @@ type listDetailPageData struct {
 	List         store.CuratedList
 	Lists        []store.CuratedList
 	SelectedSlug string
-	Problems     []store.CuratedListProblem // flat list (LeetCode All view)
-	Sections     []PatternSection           // grouped view (curated list)
+	Sections     []PatternSection
 }
 
 func groupBySection(problems []store.CuratedListProblem) []PatternSection {
