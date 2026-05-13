@@ -84,12 +84,17 @@ def main():
     require("sync cookies" not in popup_html and "import history" not in popup_html, "popup must not show manual sync/import buttons")
     require("LEETDRILL_TODAY_PROBLEMS" in background and "LEETDRILL_TODAY_PROBLEMS" in popup_js, "popup must load all Today problems")
     require("LEETDRILL_OPEN_CODE_PAGE" in popup_js and "LEETDRILL_SAVE_TOKEN" in popup_js, "popup must expose code connect when disconnected")
+    require("saveToken" not in popup_html and "save manual code" not in popup_html, "popup must auto-save login tokens without a save button")
+    require("saveToken" not in (EXT / "options.html").read_text() and "save manual code" not in (EXT / "options.html").read_text(), "options must auto-save login tokens without a save button")
+    require("Click here to obtain login code" in popup_html and "Click here to obtain login code" in (EXT / "options.html").read_text(), "connect button text must point to login code")
+    require("Login Token" in popup_html and "Login Token" in (EXT / "options.html").read_text(), "manual code label must be Login Token")
+    require("scheduleTokenSave" in popup_js and "scheduleTokenSave" in options, "popup/options must auto-save pasted login tokens")
 
     for name in ["compat.js", "inject.js", "popup.html", "options.html"]:
         require((EXT / "firefox" / name).read_text() == (EXT / name).read_text(), f"firefox {name} must mirror shared {name}")
     require((EXT / "firefox" / "options.js").read_text() == (EXT / "options.js").read_text(), "firefox options.js must mirror shared options.js")
     require("use browser login" not in (EXT / "firefox" / "options.html").read_text(), "firefox options must not show browser-login UI")
-    require("Manual code" in (EXT / "firefox" / "options.html").read_text(), "firefox options must show manual code UI")
+    require("Login Token" in (EXT / "firefox" / "options.html").read_text(), "firefox options must show login token UI")
 
     for icon in ["icon16.png", "icon48.png", "icon128.png"]:
         require((EXT / "icons" / icon).exists(), f"chrome icon missing: {icon}")

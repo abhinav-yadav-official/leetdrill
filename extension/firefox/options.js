@@ -22,10 +22,36 @@ function setStatus(msg, cls) {
   el.className = "status " + (cls || "");
 }
 
+let tokenSaveTimer = null;
+
+function scheduleTokenSave() {
+  clearTimeout(tokenSaveTimer);
+  tokenSaveTimer = setTimeout(saveLoginToken, 350);
+}
+
+async function saveLoginToken() {
+  const token = $("manualToken").value.trim();
+  if (!token) return;
+  await send("LEETDRILL_SAVE_CONFIG", { backendUrl: $("backend").value.trim() });
+  const res = await send("LEETDRILL_SAVE_TOKEN", { token });
+  if (!res.ok) {
+    setStatus(`login token failed: ${res.error || "unknown error"}`, "bad");
+    return;
+  }
+  $("manualToken").value = "";
+  const test = await send("LEETDRILL_TEST_CONNECTION");
+  if (test.ok && test.data && test.data.connected) {
+    setStatus("connected - login token saved and verified", "ok");
+  } else {
+    const msg = test.data && test.data.message ? test.data.message : "run test connection";
+    setStatus(`login token saved; test failed: ${msg}`, "bad");
+  }
+}
+
 $("codePage").addEventListener("click", async () => {
   await send("LEETDRILL_SAVE_CONFIG", { backendUrl: $("backend").value.trim() });
   const res = await send("LEETDRILL_OPEN_CODE_PAGE");
-  setStatus(res.ok ? "opened code page" : `open failed: ${res.error || "unknown error"}`, res.ok ? "ok" : "bad");
+  setStatus(res.ok ? "opened login code page" : `open failed: ${res.error || "unknown error"}`, res.ok ? "ok" : "bad");
 });
 
 $("testConnection").addEventListener("click", async () => {
@@ -45,21 +71,7 @@ $("testConnection").addEventListener("click", async () => {
   }
 });
 
-$("saveToken").addEventListener("click", async () => {
-  await send("LEETDRILL_SAVE_CONFIG", { backendUrl: $("backend").value.trim() });
-  const res = await send("LEETDRILL_SAVE_TOKEN", { token: $("manualToken").value.trim() });
-  if (!res.ok) {
-    setStatus(`manual connect failed: ${res.error || "unknown error"}`, "bad");
-    return;
-  }
-  $("manualToken").value = "";
-  const test = await send("LEETDRILL_TEST_CONNECTION");
-  if (test.ok && test.data && test.data.connected) {
-    setStatus("connected - manual code saved and verified", "ok");
-  } else {
-    const msg = test.data && test.data.message ? test.data.message : "run test connection";
-    setStatus(`manual code saved; test failed: ${msg}`, "bad");
-  }
-});
+$("manualToken").addEventListener("input", scheduleTokenSave);
+$("manualToken").addEventListener("paste", scheduleTokenSave);
 
 load();
