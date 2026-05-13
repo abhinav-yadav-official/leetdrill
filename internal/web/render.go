@@ -37,9 +37,10 @@ func NewRendererWithBasePath(basePath string) (*Renderer, error) {
 		"statusLabel":  labelForStatus,
 		"verdictBadge": badgeClassForVerdict,
 		"mistakeLabel": labelForMistakeTag,
-		"upper":        strings.ToUpper,
-		"hasItems":     func(n int) bool { return n > 0 },
-		"ldLogo":       ldLogo,
+		"upper":       strings.ToUpper,
+		"hasItems":    func(n int) bool { return n > 0 },
+		"ldLogo":      ldLogo,
+		"progressPct": progressPct,
 	}
 
 	base, err := assetsFS.ReadFile("templates/_base.html")
@@ -244,6 +245,13 @@ func badgeClassForStatus(s any) string {
 
 func labelForStatus(s any) string {
 	return fmt.Sprint(s)
+}
+
+func progressPct(solved, total int) int {
+	if total == 0 {
+		return 0
+	}
+	return (solved * 100) / total
 }
 
 func labelForMistakeTag(tag any) string {

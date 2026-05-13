@@ -4,6 +4,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewRendererLoadsCorePagesAndPartials(t *testing.T) {
@@ -14,6 +15,8 @@ func TestNewRendererLoadsCorePagesAndPartials(t *testing.T) {
 
 	for _, name := range []string{
 		"dashboard",
+		"lists",
+		"list_detail",
 		"problems",
 		"problem_detail",
 		"patterns",
@@ -50,12 +53,45 @@ func TestRendererPageIncludesHTMXShell(t *testing.T) {
 	body := rec.Body.String()
 	for _, want := range []string{
 		`<script src="https://unpkg.com/htmx.org`,
+		`href="/favicon.svg"`,
+		`aria-label="LeetDrill logo"`,
+		`>LD</text>`,
 		`href="/session/today"`,
 		`LeetDrill`,
 		`Today`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("rendered dashboard missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestRendererPageIncludesThemeControls(t *testing.T) {
+	r, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	r.Page(rec, "dashboard", PageData{
+		Title:   "Dashboard",
+		UserID:  7,
+		NavItem: "dashboard",
+		Data:    map[string]string{"Now": "ok"},
+	})
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`leetdrill-theme`,
+		`data-theme-toggle`,
+		`data-theme-label`,
+		`.dark .bg-white`,
+		`.dark .rounded-full.bg-emerald-100.text-emerald-800 { color: #065f46`,
+		`.dark svg[aria-label="LeetDrill logo"] rect { fill: #f4f4f5`,
+		`.dark svg[aria-label="LeetDrill logo"] text { fill: #18181b`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered dashboard missing theme fragment %q:\n%s", want, body)
 		}
 	}
 }
@@ -233,6 +269,11 @@ func TestTodayPageIncludesSolvedFilter(t *testing.T) {
 					"Status":     "new",
 					"URL":        "https://leetcode.com/problems/unique-paths/",
 					"Topics":     []any{},
+					"MistakeOptions": []map[string]any{{
+						"Value":   "edge-case",
+						"Label":   "Edge case",
+						"Checked": true,
+					}},
 				}},
 			},
 		},
@@ -243,10 +284,57 @@ func TestTodayPageIncludesSolvedFilter(t *testing.T) {
 		`name="filter"`,
 		`value="solved"`,
 		`value="not-solved" selected`,
+		`name="mode" value="weak"`,
+		`name="mistake_tags" value="edge-case" checked`,
 		`hx-get="/leetdrill/session/42/next?filter=not-solved"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("rendered today page missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestProblemDetailShowsMistakeTagsInAttemptHistory(t *testing.T) {
+	r, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	r.Page(rec, "problem_detail", PageData{
+		Title:   "Unique Paths",
+		UserID:  7,
+		NavItem: "problems",
+		Data: map[string]any{
+			"Problem": map[string]any{
+				"Title":      "Unique Paths",
+				"Difficulty": "Medium",
+				"URL":        "https://leetcode.com/problems/unique-paths/",
+				"TopicTags":  []any{},
+			},
+			"State": map[string]any{
+				"Status":        "learning",
+				"TotalAttempts": 1,
+				"TotalFails":    1,
+				"Streak":        0,
+			},
+			"Attempts": []map[string]any{{
+				"Verdict":       "WA",
+				"DerivedRating": "failed",
+				"CompletedAt":   time.Date(2026, 5, 13, 8, 0, 0, 0, time.UTC),
+				"Journal":       "missed empty input",
+				"MistakeTags":   []string{"edge-case"},
+			}},
+		},
+	})
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`missed empty input`,
+		`Edge case`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered problem detail missing %q:\n%s", want, body)
 		}
 	}
 }
@@ -282,6 +370,120 @@ func TestPatternsPageLinksToPatternFilteredProblems(t *testing.T) {
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("rendered patterns missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestListsPageShowsListSelectorWithAllDefault(t *testing.T) {
+	r, err := NewRendererWithBasePath("/leetdrill")
+	if err != nil {
+		t.Fatalf("NewRendererWithBasePath() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	r.Page(rec, "lists", PageData{
+		Title:   "Lists",
+		UserID:  7,
+		NavItem: "lists",
+		Data: map[string]any{
+			"List": map[string]any{
+				"Slug":        "",
+				"Name":        "LeetCode All",
+				"Description": "All imported LeetCode problems.",
+				"TotalItems":  2400,
+				"SolvedItems": 42,
+			},
+			"SelectedSlug": "",
+			"Lists": []map[string]any{{
+				"Slug":        "blind-75",
+				"Name":        "Blind 75",
+				"Description": "Core interview problems.",
+				"TotalItems":  75,
+				"SolvedItems": 12,
+			}},
+			"Problems": []map[string]any{{
+				"Position":   1,
+				"ProblemID":  1,
+				"Slug":       "two-sum",
+				"LeetcodeID": "1",
+				"Title":      "Two Sum",
+				"Difficulty": "Easy",
+				"Status":     "new",
+				"Topics":     []any{},
+			}},
+		},
+	})
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`name="list"`,
+		`value="/leetdrill/lists" selected>LeetCode All</option>`,
+		`value="/leetdrill/lists/blind-75"`,
+		`LeetCode All`,
+		`Blind 75`,
+		`42 solved · 2400 problems`,
+		`href="/leetdrill/problems/two-sum"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered lists page missing selector fragment %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestListDetailShowsProblemOrderPosition(t *testing.T) {
+	r, err := NewRendererWithBasePath("/leetdrill")
+	if err != nil {
+		t.Fatalf("NewRendererWithBasePath() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	r.Page(rec, "list_detail", PageData{
+		Title:   "Blind 75",
+		UserID:  7,
+		NavItem: "lists",
+		Data: map[string]any{
+			"List": map[string]any{
+				"Slug":        "blind-75",
+				"Name":        "Blind 75",
+				"Description": "Core interview problems.",
+				"TotalItems":  75,
+				"SolvedItems": 12,
+			},
+			"SelectedSlug": "blind-75",
+			"Lists": []map[string]any{{
+				"Slug":       "blind-75",
+				"Name":       "Blind 75",
+				"TotalItems": 75,
+			}},
+			"Sections": []map[string]any{{
+				"Name":        "Arrays",
+				"SolvedCount": 0,
+				"TotalCount":  1,
+				"Problems": []map[string]any{{
+					"Position":   1,
+					"ProblemID":  1,
+					"Slug":       "two-sum",
+					"LeetcodeID": "1",
+					"Title":      "Two Sum",
+					"Difficulty": "Easy",
+					"Status":     "new",
+					"Topics":     []any{},
+				}},
+			}},
+		},
+	})
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`name="list"`,
+		`value="/leetdrill/lists/blind-75" selected`,
+		`Blind 75`,
+		`#1`,
+		`Arrays`,
+		`href="/leetdrill/problems/two-sum"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered list detail missing %q:\n%s", want, body)
 		}
 	}
 }

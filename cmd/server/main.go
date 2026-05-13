@@ -3,6 +3,8 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -82,6 +84,7 @@ type server struct {
 	basePath      string
 	mailer        *mailer.Mailer
 	resendLimiter *ipRateLimiter
+	googleOAuth   *auth.GoogleOAuth
 }
 
 func main() {
@@ -125,12 +128,18 @@ func main() {
 		log.Printf("single-user mode: user_id=%d", uid)
 	}
 
+	appBase := os.Getenv("LEETDRILL_APP_BASE")
+	if appBase == "" {
+		appBase = "http://localhost" + addr
+	}
+
+	googleOAuth, err := auth.GoogleOAuthFromEnv(appBase)
+	if err != nil {
+		log.Printf("warning: google oauth not configured: %v", err)
+	}
+
 	var ml *mailer.Mailer
 	if !strings.EqualFold(os.Getenv("SINGLE_USER"), "true") {
-		appBase := os.Getenv("LEETDRILL_APP_BASE")
-		if appBase == "" {
-			appBase = "http://localhost" + addr
-		}
 		ml, err = mailer.FromEnv(appBase)
 		if err != nil {
 			log.Printf("warning: mailer not configured: %v", err)
@@ -146,6 +155,7 @@ func main() {
 		basePath:      basePath,
 		mailer:        ml,
 		resendLimiter: newIPRateLimiter(5, time.Hour),
+		googleOAuth:   googleOAuth,
 	}
 	if !strings.EqualFold(os.Getenv("LEETDRILL_SYNC_WORKER"), "false") {
 		(&ldsync.RecentWorker{
@@ -193,11 +203,14 @@ func (s *server) router() http.Handler {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
+	r.Get("/favicon.svg", handleFavicon)
 
 	r.Get("/login", s.handleLoginPage)
 	r.Post("/login", s.handleLoginSubmit)
 	r.Get("/signup", s.handleSignupPage)
 	r.Post("/signup", s.handleSignupSubmit)
+	r.Get("/auth/google/start", s.handleGoogleStart)
+	r.Get("/auth/google/callback", s.handleGoogleCallback)
 	r.Post("/logout", s.handleLogout)
 	r.Get("/extension/connect", s.handleExtensionConnect)
 	r.Get("/verify-pending", s.handleVerifyPending)
@@ -214,6 +227,8 @@ func (s *server) router() http.Handler {
 		r.Post("/session/start", s.handleSessionStart)
 		r.Get("/session/today", s.handleSessionToday)
 		r.Get("/session/{id}/next", s.handleSessionNext)
+		r.Get("/lists", s.handleLists)
+		r.Get("/lists/{slug}", s.handleListDetail)
 		r.Get("/problems", s.handleProblems)
 		r.Get("/problems/{slug}", s.handleProblemDetail)
 		r.Post("/problems/{id}/journal", s.handleProblemJournal)
@@ -252,7 +267,97 @@ func (s *server) appPath(target string) string {
 	return web.AppPath(s.basePath, target)
 }
 
+func handleFavicon(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = w.Write([]byte(ldLogoSVG))
+}
+
 // ---- HTML ----
+
+const ldLogoSVG = `<svg aria-label="LeetDrill logo" role="img" viewBox="0 0 64 64" class="h-8 w-8 shrink-0 rounded-md">
+          <rect width="64" height="64" rx="12" fill="#18181b"></rect>
+          <text x="32" y="39" text-anchor="middle" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="24" font-weight="800" fill="#f4f4f5">LD</text>
+        </svg>`
+
+const authBrand = `<div class="flex items-center gap-2 text-sm font-semibold uppercase tracking-normal text-zinc-500">` + ldLogoSVG + `<span>LeetDrill</span></div>`
+
+const themeHead = `<script>
+      (function () {
+        var key = "leetdrill-theme";
+        var modes = ["system", "dark", "light"];
+        function clean(mode) {
+          return modes.indexOf(mode) === -1 ? "system" : mode;
+        }
+        function wantsDark(mode) {
+          return mode === "dark" || (mode === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        }
+        function apply(mode) {
+          mode = clean(mode);
+          document.documentElement.classList.toggle("dark", wantsDark(mode));
+          document.documentElement.dataset.theme = mode;
+          var label = mode.charAt(0).toUpperCase() + mode.slice(1);
+          document.querySelectorAll("[data-theme-label]").forEach(function (el) { el.textContent = label; });
+          document.querySelectorAll("[data-theme-toggle]").forEach(function (el) { el.setAttribute("aria-label", "Theme: " + label); });
+        }
+        window.leetdrillTheme = {
+          apply: apply,
+          next: function () {
+            var current = clean(localStorage.getItem(key) || "system");
+            var next = modes[(modes.indexOf(current) + 1) %% modes.length];
+            localStorage.setItem(key, next);
+            apply(next);
+          }
+        };
+        try { apply(localStorage.getItem(key) || "system"); } catch (_) { apply("system"); }
+        document.addEventListener("DOMContentLoaded", function () {
+          document.querySelectorAll("[data-theme-toggle]").forEach(function (el) {
+            el.addEventListener("click", window.leetdrillTheme.next);
+          });
+          apply(clean(localStorage.getItem(key) || "system"));
+        });
+        if (window.matchMedia) {
+          window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+            apply(clean(localStorage.getItem(key) || "system"));
+          });
+        }
+      })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root { color-scheme: light; }
+      .dark { color-scheme: dark; }
+      .dark body, .dark .bg-zinc-50 { background-color: #09090b !important; color: #f4f4f5 !important; }
+      .dark .bg-white { background-color: #18181b !important; }
+      .dark .bg-zinc-100 { background-color: #27272a !important; }
+      .dark .bg-zinc-900 { background-color: #f4f4f5 !important; color: #09090b !important; }
+      .dark svg[aria-label="LeetDrill logo"] rect { fill: #f4f4f5 !important; }
+      .dark svg[aria-label="LeetDrill logo"] text { fill: #18181b !important; }
+      .dark .hover\:bg-zinc-50:hover, .dark .hover\:bg-zinc-100:hover { background-color: #27272a !important; }
+      .dark .hover\:bg-zinc-800:hover { background-color: #e4e4e7 !important; }
+      .dark .text-zinc-950, .dark .text-zinc-900, .dark .text-zinc-800, .dark .text-zinc-700 { color: #e4e4e7 !important; }
+      .dark .text-zinc-600, .dark .text-zinc-500 { color: #a1a1aa !important; }
+      .dark .text-zinc-400 { color: #71717a !important; }
+      .dark .border-zinc-100, .dark .border-zinc-200, .dark .border-zinc-300 { border-color: #3f3f46 !important; }
+      .dark .divide-zinc-100 > :not([hidden]) ~ :not([hidden]), .dark .divide-zinc-200 > :not([hidden]) ~ :not([hidden]) { border-color: #27272a !important; }
+      .dark .bg-sky-50 { background-color: #082f49 !important; }
+      .dark .border-sky-200 { border-color: #0369a1 !important; }
+      .dark .text-sky-900 { color: #bae6fd !important; }
+      .dark .bg-emerald-50 { background-color: #022c22 !important; }
+      .dark .border-emerald-200 { border-color: #047857 !important; }
+      .dark .text-emerald-950, .dark .text-emerald-900, .dark .text-emerald-800 { color: #a7f3d0 !important; }
+      .dark .rounded-full.bg-emerald-100.text-emerald-800 { color: #065f46 !important; }
+      .dark .bg-rose-50 { background-color: #4c0519 !important; }
+      .dark .border-rose-200 { border-color: #be123c !important; }
+      .dark .text-rose-600 { color: #fda4af !important; }
+      .dark input, .dark select, .dark textarea { background-color: #18181b !important; border-color: #3f3f46 !important; color: #f4f4f5 !important; }
+      .dark input::placeholder, .dark textarea::placeholder { color: #71717a !important; }
+      .dark .shadow-sm { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35) !important; }
+    </style>`
+
+const authThemeToggle = `<button type="button" data-theme-toggle class="fixed right-4 top-4 z-10 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm hover:bg-zinc-50">
+      Theme: <span data-theme-label>System</span>
+    </button>`
 
 const loginPage = `<!doctype html>
 <html lang="en">
@@ -260,12 +365,14 @@ const loginPage = `<!doctype html>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login · LeetDrill</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    ` + themeHead + `
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-950">
+    ` + authThemeToggle + `
     <main class="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_420px] lg:px-8">
       <section class="max-w-xl">
-        <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
+        ` + authBrand + `
         <h1 class="mt-3 text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">Daily practice flow for LeetCode.</h1>
         <p class="mt-4 max-w-lg text-base leading-7 text-zinc-600">Track recent submissions, review timing, and difficult problems from one focused workspace.</p>
         <div class="mt-8 grid max-w-md grid-cols-3 gap-3 text-sm">
@@ -288,6 +395,12 @@ const loginPage = `<!doctype html>
         <div>
           <h2 class="text-xl font-semibold tracking-normal">Sign in</h2>
           <p class="mt-2 text-sm text-zinc-600" aria-live="polite">%s</p>
+        </div>
+        <a class="mt-6 flex w-full items-center justify-center rounded-md border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2" href="%s">Continue with Google</a>
+        <div class="mt-5 flex items-center gap-3 text-xs uppercase tracking-normal text-zinc-400">
+          <div class="h-px flex-1 bg-zinc-200"></div>
+          <span>Email</span>
+          <div class="h-px flex-1 bg-zinc-200"></div>
         </div>
         <form class="mt-6 space-y-4" method="post" action="%s">
           <input type="hidden" name="next" value="%s">
@@ -316,12 +429,14 @@ const signupPage = `<!doctype html>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign up · LeetDrill</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    ` + themeHead + `
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-950">
+    ` + authThemeToggle + `
     <main class="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_420px] lg:px-8">
       <section class="max-w-xl">
-        <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
+        ` + authBrand + `
         <h1 class="mt-3 text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">Daily practice flow for LeetCode.</h1>
         <p class="mt-4 max-w-lg text-base leading-7 text-zinc-600">Track recent submissions, review timing, and difficult problems from one focused workspace.</p>
         <div class="mt-8 grid max-w-md grid-cols-3 gap-3 text-sm">
@@ -344,6 +459,12 @@ const signupPage = `<!doctype html>
         <div>
           <h2 class="text-xl font-semibold tracking-normal">Create account</h2>
           <p class="mt-2 text-sm text-zinc-600" aria-live="polite">%s</p>
+        </div>
+        <a class="mt-6 flex w-full items-center justify-center rounded-md border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2" href="%s">Continue with Google</a>
+        <div class="mt-5 flex items-center gap-3 text-xs uppercase tracking-normal text-zinc-400">
+          <div class="h-px flex-1 bg-zinc-200"></div>
+          <span>Email</span>
+          <div class="h-px flex-1 bg-zinc-200"></div>
         </div>
         <form class="mt-6 space-y-4" method="post" action="%s">
           <div>
@@ -373,12 +494,14 @@ const extensionConnectPage = `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="leetdrill-extension-token" content="%s">
     <title>Extension connected · LeetDrill</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    ` + themeHead + `
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-950">
+    ` + authThemeToggle + `
     <main class="mx-auto flex min-h-screen max-w-lg items-center px-4 py-10">
       <section class="w-full rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-        <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
+        ` + authBrand + `
         <h1 class="mt-3 text-2xl font-semibold tracking-normal">LeetDrill extension connected</h1>
         <p id="leetdrill-extension-status" class="mt-3 text-sm leading-6 text-zinc-600">Saving the extension token in your browser.</p>
         <div class="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
@@ -424,12 +547,14 @@ const verifyPendingPage = `<!doctype html>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Verify your email · LeetDrill</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    ` + themeHead + `
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-950">
+    ` + authThemeToggle + `
     <main class="mx-auto flex min-h-screen max-w-lg items-center px-4 py-10">
       <section class="w-full rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-        <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
+        ` + authBrand + `
         <h1 class="mt-3 text-2xl font-semibold tracking-normal">Check your email</h1>
         <p class="mt-3 text-sm leading-6 text-zinc-600">We sent a verification link to <strong>%s</strong>. Click it to activate your account.</p>
         <p class="mt-2 text-sm text-zinc-500" aria-live="polite">%s</p>
@@ -450,12 +575,14 @@ const forgotPage = `<!doctype html>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Forgot password · LeetDrill</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    ` + themeHead + `
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-950">
+    ` + authThemeToggle + `
     <main class="mx-auto flex min-h-screen max-w-lg items-center px-4 py-10">
       <section class="w-full rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-        <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
+        ` + authBrand + `
         <h1 class="mt-3 text-2xl font-semibold tracking-normal">Reset your password</h1>
         <p class="mt-2 text-sm text-zinc-500" aria-live="polite">%s</p>
         <form class="mt-5 space-y-4" method="post" action="%s">
@@ -478,12 +605,14 @@ const resetPage = `<!doctype html>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Set new password · LeetDrill</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    ` + themeHead + `
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-950">
+    ` + authThemeToggle + `
     <main class="mx-auto flex min-h-screen max-w-lg items-center px-4 py-10">
       <section class="w-full rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-        <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
+        ` + authBrand + `
         <h1 class="mt-3 text-2xl font-semibold tracking-normal">Set new password</h1>
         <p class="mt-2 text-sm text-zinc-500" aria-live="polite">%s</p>
         <form class="mt-5 space-y-4" method="post" action="%s">
@@ -510,12 +639,14 @@ const verifyDonePage = `<!doctype html>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>%s · LeetDrill</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    ` + themeHead + `
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-950">
+    ` + authThemeToggle + `
     <main class="mx-auto flex min-h-screen max-w-lg items-center px-4 py-10">
       <section class="w-full rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-        <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
+        ` + authBrand + `
         <h1 class="mt-3 text-2xl font-semibold tracking-normal">%s</h1>
         <p class="mt-3 text-sm leading-6 text-zinc-600">%s</p>
         <a class="mt-5 block w-full rounded-md bg-zinc-900 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-zinc-800" href="%s">%s</a>
@@ -539,7 +670,7 @@ func (s *server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("reset") == "1" {
 		msg = "Password updated. Log in with your new password."
 	}
-	_, _ = fmt.Fprintf(w, loginPage, html.EscapeString(msg), s.appPath("/login"), html.EscapeString(next), s.appPath("/forgot"), s.appPath("/signup"))
+	_, _ = fmt.Fprintf(w, loginPage, html.EscapeString(msg), s.googleStartURL(next), s.appPath("/login"), html.EscapeString(next), s.appPath("/forgot"), s.appPath("/signup"))
 }
 
 func (s *server) handleLoginSubmit(w http.ResponseWriter, r *http.Request) {
@@ -557,12 +688,14 @@ func (s *server) handleLoginSubmit(w http.ResponseWriter, r *http.Request) {
 	const q = `SELECT id, password_hash FROM users WHERE email = $1`
 	if err := s.store.DB().QueryRow(r.Context(), q, email).Scan(&userID, &hash); err != nil {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprintf(w, loginPage, "invalid email or password.", s.appPath("/login"), html.EscapeString(s.safeLoginNext(r.FormValue("next"))), s.appPath("/forgot"), s.appPath("/signup"))
+		next := s.safeLoginNext(r.FormValue("next"))
+		_, _ = fmt.Fprintf(w, loginPage, "invalid email or password.", s.googleStartURL(next), s.appPath("/login"), html.EscapeString(next), s.appPath("/forgot"), s.appPath("/signup"))
 		return
 	}
 	if err := auth.VerifyPassword(hash, pw); err != nil {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprintf(w, loginPage, "invalid email or password.", s.appPath("/login"), html.EscapeString(s.safeLoginNext(r.FormValue("next"))), s.appPath("/forgot"), s.appPath("/signup"))
+		next := s.safeLoginNext(r.FormValue("next"))
+		_, _ = fmt.Fprintf(w, loginPage, "invalid email or password.", s.googleStartURL(next), s.appPath("/login"), html.EscapeString(next), s.appPath("/forgot"), s.appPath("/signup"))
 		return
 	}
 	token, err := s.authmw.IssueWebToken(r.Context(), userID)
@@ -592,7 +725,7 @@ func (s *server) safeLoginNext(raw string) string {
 
 func (s *server) handleSignupPage(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = fmt.Fprintf(w, signupPage, "create an account.", s.appPath("/signup"), s.appPath("/login"))
+	_, _ = fmt.Fprintf(w, signupPage, "create an account.", s.googleStartURL(""), s.appPath("/signup"), s.appPath("/login"))
 }
 
 func (s *server) handleSignupSubmit(w http.ResponseWriter, r *http.Request) {
@@ -607,7 +740,7 @@ func (s *server) handleSignupSubmit(w http.ResponseWriter, r *http.Request) {
 	)
 	if message != "" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprintf(w, signupPage, message, s.appPath("/signup"), s.appPath("/login"))
+		_, _ = fmt.Fprintf(w, signupPage, message, s.googleStartURL(""), s.appPath("/signup"), s.appPath("/login"))
 		return
 	}
 	hash, err := auth.HashPassword(r.FormValue("password"))
@@ -622,14 +755,14 @@ func (s *server) handleSignupSubmit(w http.ResponseWriter, r *http.Request) {
 	).Scan(&userID)
 	if err != nil {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprintf(w, signupPage, "could not create account.", s.appPath("/signup"), s.appPath("/login"))
+		_, _ = fmt.Fprintf(w, signupPage, "could not create account.", s.googleStartURL(""), s.appPath("/signup"), s.appPath("/login"))
 		return
 	}
 	vtok, vhash, err := auth.NewToken()
 	if err != nil {
 		log.Printf("signup: new token: %v", err)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprintf(w, signupPage, "an error occurred. please try again.", s.appPath("/signup"), s.appPath("/login"))
+		_, _ = fmt.Fprintf(w, signupPage, "an error occurred. please try again.", s.googleStartURL(""), s.appPath("/signup"), s.appPath("/login"))
 		return
 	}
 	if err := store.CreateEmailToken(r.Context(), s.store.DB(), userID, store.EmailTokenVerify,
@@ -643,6 +776,136 @@ func (s *server) handleSignupSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	q2 := url.Values{"email": {email}}
 	http.Redirect(w, r, s.appPath("/verify-pending")+"?"+q2.Encode(), http.StatusSeeOther)
+}
+
+const googleOAuthStateCookie = "ld_google_oauth_state"
+
+func (s *server) googleStartURL(next string) string {
+	u := s.appPath("/auth/google/start")
+	next = strings.TrimSpace(next)
+	if next == "" {
+		return u
+	}
+	q := url.Values{"next": {next}}
+	return u + "?" + q.Encode()
+}
+
+func (s *server) handleGoogleStart(w http.ResponseWriter, r *http.Request) {
+	if s.googleOAuth == nil {
+		http.Error(w, "google login not configured", http.StatusNotFound)
+		return
+	}
+	next := s.safeLoginNext(r.URL.Query().Get("next"))
+	state, cookieValue, err := newGoogleOAuthState(next)
+	if err != nil {
+		http.Error(w, "google state", http.StatusInternalServerError)
+		return
+	}
+	s.setGoogleOAuthStateCookie(w, r, cookieValue)
+	http.Redirect(w, r, s.googleOAuth.AuthCodeURL(state), http.StatusSeeOther)
+}
+
+func (s *server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
+	if s.googleOAuth == nil {
+		http.Error(w, "google login not configured", http.StatusNotFound)
+		return
+	}
+	if r.URL.Query().Get("error") != "" {
+		http.Redirect(w, r, s.appPath("/login"), http.StatusSeeOther)
+		return
+	}
+	cookie, err := r.Cookie(googleOAuthStateCookie)
+	if err != nil {
+		http.Error(w, "missing google state", http.StatusBadRequest)
+		return
+	}
+	s.clearGoogleOAuthStateCookie(w, r)
+	next, ok := parseGoogleOAuthState(r.URL.Query().Get("state"), cookie.Value)
+	if !ok {
+		http.Error(w, "invalid google state", http.StatusBadRequest)
+		return
+	}
+	user, err := s.googleOAuth.ExchangeUser(r.Context(), r.URL.Query().Get("code"))
+	if err != nil {
+		log.Printf("google login: exchange: %v", err)
+		http.Redirect(w, r, s.appPath("/login"), http.StatusSeeOther)
+		return
+	}
+	userID, err := store.EnsureGoogleUser(r.Context(), s.store.DB(), user.Sub, user.Email)
+	if err != nil {
+		log.Printf("google login: ensure user: %v", err)
+		http.Redirect(w, r, s.appPath("/login"), http.StatusSeeOther)
+		return
+	}
+	token, err := s.authmw.IssueWebToken(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "issue token", http.StatusInternalServerError)
+		return
+	}
+	s.authmw.SetSessionCookie(w, token)
+	http.Redirect(w, r, s.safeLoginNext(next), http.StatusSeeOther)
+}
+
+func newGoogleOAuthState(next string) (state, cookieValue string, err error) {
+	state, _, err = auth.NewToken()
+	if err != nil {
+		return "", "", err
+	}
+	next = base64.RawURLEncoding.EncodeToString([]byte(strings.TrimSpace(next)))
+	return state, state + "." + next, nil
+}
+
+func parseGoogleOAuthState(state, cookieValue string) (string, bool) {
+	state = strings.TrimSpace(state)
+	parts := strings.SplitN(cookieValue, ".", 2)
+	if state == "" || len(parts) != 2 {
+		return "", false
+	}
+	if subtle.ConstantTimeCompare([]byte(state), []byte(parts[0])) != 1 {
+		return "", false
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "", false
+	}
+	return string(raw), true
+}
+
+func (s *server) setGoogleOAuthStateCookie(w http.ResponseWriter, _ *http.Request, value string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     googleOAuthStateCookie,
+		Value:    value,
+		Path:     s.cookiePath(),
+		Expires:  time.Now().Add(10 * time.Minute),
+		MaxAge:   600,
+		HttpOnly: true,
+		Secure:   s.authmw != nil && s.authmw.SecureCookies,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func (s *server) clearGoogleOAuthStateCookie(w http.ResponseWriter, _ *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     googleOAuthStateCookie,
+		Value:    "",
+		Path:     s.cookiePath(),
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   s.authmw != nil && s.authmw.SecureCookies,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func (s *server) cookiePath() string {
+	base := strings.TrimRight(strings.TrimSpace(s.basePath), "/")
+	if base == "" || base == "/" {
+		return "/"
+	}
+	if !strings.HasPrefix(base, "/") {
+		return "/" + base
+	}
+	return base
 }
 
 func validateSignupForm(email, password, confirm string) (string, string) {
@@ -905,7 +1168,17 @@ type dashboardPageData struct {
 
 func (s *server) handleSessionStart(w http.ResponseWriter, r *http.Request) {
 	uid := auth.UserID(r.Context())
-	if _, err := store.EnsureTodaySession(r.Context(), s.store.DB(), uid, 5); err != nil {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	var err error
+	if r.FormValue("mode") == "weak" {
+		_, err = store.RebuildTodayWeakSession(r.Context(), s.store.DB(), uid, 5)
+	} else {
+		_, err = store.EnsureTodaySession(r.Context(), s.store.DB(), uid, 5)
+	}
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -995,16 +1268,24 @@ type sessionCardData struct {
 }
 
 type sessionProblem struct {
-	ProblemID  int64
-	Slug       string
-	LeetcodeID string
-	Title      string
-	Difficulty models.Difficulty
-	URL        string
-	Topics     []models.Tag
-	Status     models.Status
-	Completed  bool
-	Journal    string
+	ProblemID      int64
+	Slug           string
+	LeetcodeID     string
+	Title          string
+	Difficulty     models.Difficulty
+	URL            string
+	Topics         []models.Tag
+	Status         models.Status
+	Completed      bool
+	Journal        string
+	MistakeTags    []string
+	MistakeOptions []mistakeTagOption
+}
+
+type mistakeTagOption struct {
+	Value   string
+	Label   string
+	Checked bool
 }
 
 func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session, filter string) (sessionCardData, error) {
@@ -1039,22 +1320,26 @@ func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session
 		}
 
 		journal := ""
+		mistakeTags := []string{}
 		detail, err := store.GetProblemDetail(ctx, s.store.DB(), uid, p.LeetcodeSlug, 1)
 		if err == nil && len(detail.Attempts) > 0 {
 			journal = detail.Attempts[0].Journal
+			mistakeTags = normalizeMistakeTags(detail.Attempts[0].MistakeTags)
 		}
 
 		card.Problems = append(card.Problems, sessionProblem{
-			ProblemID:  p.ID,
-			Slug:       p.LeetcodeSlug,
-			LeetcodeID: p.LeetcodeFrontendID,
-			Title:      p.Title,
-			Difficulty: p.Difficulty,
-			URL:        p.URL,
-			Topics:     p.TopicTags,
-			Status:     up.Status,
-			Completed:  completed,
-			Journal:    journal,
+			ProblemID:      p.ID,
+			Slug:           p.LeetcodeSlug,
+			LeetcodeID:     p.LeetcodeFrontendID,
+			Title:          p.Title,
+			Difficulty:     p.Difficulty,
+			URL:            p.URL,
+			Topics:         p.TopicTags,
+			Status:         up.Status,
+			Completed:      completed,
+			Journal:        journal,
+			MistakeTags:    mistakeTags,
+			MistakeOptions: mistakeOptionsForSelection(mistakeTags),
 		})
 	}
 
@@ -1090,6 +1375,45 @@ func normalizeCompletionFilter(raw string) string {
 	default:
 		return ""
 	}
+}
+
+func normalizeMistakeTags(values []string) []string {
+	seen := make(map[string]bool, len(values))
+	for _, value := range values {
+		seen[strings.ToLower(strings.TrimSpace(value))] = true
+	}
+	out := make([]string, 0, len(mistakeTaxonomy))
+	for _, opt := range mistakeTaxonomy {
+		if seen[opt.Value] {
+			out = append(out, opt.Value)
+		}
+	}
+	return out
+}
+
+func mistakeOptionsForSelection(selected []string) []mistakeTagOption {
+	checked := make(map[string]bool, len(selected))
+	for _, tag := range normalizeMistakeTags(selected) {
+		checked[tag] = true
+	}
+	options := make([]mistakeTagOption, 0, len(mistakeTaxonomy))
+	for _, opt := range mistakeTaxonomy {
+		options = append(options, mistakeTagOption{
+			Value:   opt.Value,
+			Label:   opt.Label,
+			Checked: checked[opt.Value],
+		})
+	}
+	return options
+}
+
+var mistakeTaxonomy = []mistakeTagOption{
+	{Value: "edge-case", Label: "Edge case"},
+	{Value: "off-by-one", Label: "Off by one"},
+	{Value: "wrong-invariant", Label: "Wrong invariant"},
+	{Value: "complexity", Label: "Complexity"},
+	{Value: "implementation-bug", Label: "Implementation bug"},
+	{Value: "pattern-gap", Label: "Pattern gap"},
 }
 
 func sessionPollURL(basePath string, sessionID int64, filter string) string {
@@ -1161,6 +1485,125 @@ func (s *server) handleProblems(w http.ResponseWriter, r *http.Request) {
 			NextURL:           problemPageURL(s.basePath, filters, page+1),
 		},
 	})
+}
+
+func (s *server) handleLists(w http.ResponseWriter, r *http.Request) {
+	uid := auth.UserID(r.Context())
+	lists, err := store.ListCuratedLists(r.Context(), s.store.DB(), uid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	total, err := store.CountProblemsForUser(r.Context(), s.store.DB(), uid, store.ProblemFilters{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	solved, err := store.CountProblemsForUser(r.Context(), s.store.DB(), uid, store.ProblemFilters{State: "solved"})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	problems, err := store.ListAllLeetcodeProblems(r.Context(), s.store.DB(), uid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	s.page(w, "lists", web.PageData{
+		Title:   "Lists",
+		UserID:  uid,
+		NavItem: "lists",
+		Data: listDetailPageData{
+			List: store.CuratedList{
+				Name:        "LeetCode All",
+				Description: "All imported LeetCode problems, ordered by LeetCode number.",
+				TotalItems:  total,
+				SolvedItems: solved,
+			},
+			Lists:        lists,
+			SelectedSlug: "",
+			Problems:     problems,
+		},
+	})
+}
+
+func (s *server) handleListDetail(w http.ResponseWriter, r *http.Request) {
+	uid := auth.UserID(r.Context())
+	slug := strings.TrimSpace(chi.URLParam(r, "slug"))
+	lists, err := store.ListCuratedLists(r.Context(), s.store.DB(), uid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	list, err := store.GetCuratedList(r.Context(), s.store.DB(), uid, slug)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, store.ErrNotFound) {
+			status = http.StatusNotFound
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
+	problems, err := store.ListCuratedListProblems(r.Context(), s.store.DB(), uid, slug)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	s.page(w, "list_detail", web.PageData{
+		Title:   list.Name,
+		UserID:  uid,
+		NavItem: "lists",
+		Data: listDetailPageData{
+			List:         *list,
+			Lists:        lists,
+			SelectedSlug: slug,
+			Sections:     groupBySection(problems),
+		},
+	})
+}
+
+type PatternSection struct {
+	Name        string
+	SolvedCount int
+	TotalCount  int
+	Problems    []store.CuratedListProblem
+}
+
+type listDetailPageData struct {
+	List         store.CuratedList
+	Lists        []store.CuratedList
+	SelectedSlug string
+	Problems     []store.CuratedListProblem // flat list (LeetCode All view)
+	Sections     []PatternSection           // grouped view (curated list)
+}
+
+func groupBySection(problems []store.CuratedListProblem) []PatternSection {
+	var order []string
+	groups := make(map[string]*PatternSection)
+	for _, p := range problems {
+		key := p.Section
+		if key == "" && len(p.Topics) > 0 {
+			key = p.Topics[0].Name
+		}
+		if key == "" {
+			key = "Other"
+		}
+		if _, exists := groups[key]; !exists {
+			order = append(order, key)
+			groups[key] = &PatternSection{Name: key}
+		}
+		g := groups[key]
+		g.Problems = append(g.Problems, p)
+		g.TotalCount++
+		if p.Status != models.StatusNew {
+			g.SolvedCount++
+		}
+	}
+	sections := make([]PatternSection, len(order))
+	for i, k := range order {
+		sections[i] = *groups[k]
+	}
+	return sections
 }
 
 type problemsPageData struct {
@@ -1292,7 +1735,7 @@ func (s *server) handleProblemJournal(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	err = store.UpdateLatestAttemptJournal(r.Context(), s.store.DB(), uid, problemID, r.FormValue("journal"))
+	err = store.UpdateLatestAttemptReview(r.Context(), s.store.DB(), uid, problemID, r.FormValue("journal"), normalizeMistakeTags(r.Form["mistake_tags"]))
 	if errors.Is(err, store.ErrNotFound) {
 		http.Error(w, "no attempt to annotate yet", http.StatusNotFound)
 		return
