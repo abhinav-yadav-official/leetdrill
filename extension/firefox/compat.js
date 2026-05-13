@@ -77,7 +77,8 @@
       set: wrap(api.storage.local.set, api.storage.local)
     },
     cookies: {
-      get: wrap(api.cookies.get, api.cookies)
+      get: wrap(api.cookies.get, api.cookies),
+      getAll: wrap(api.cookies.getAll, api.cookies)
     },
     alarms: {
       create: wrap(api.alarms.create, api.alarms),

@@ -81,27 +81,83 @@ function normalizeBackendUrl(raw) {
   return (raw || DEFAULTS.backendUrl).replace(/\/$/, "");
 }
 
-async function readBackendSessionToken(backendUrl) {
-  let url;
+function backendURLCandidates(backendUrl) {
   try {
-    url = new URL(normalizeBackendUrl(backendUrl) + "/");
+    const normalized = normalizeBackendUrl(backendUrl);
+    const url = new URL(normalized);
+    const appURL = new URL(normalized + "/");
+    return [...new Set([
+      appURL.href,
+      url.href,
+      `${url.origin}/`
+    ])];
+  } catch (_) {
+    return [];
+  }
+}
+
+function backendHostname(backendUrl) {
+  try {
+    return new URL(normalizeBackendUrl(backendUrl)).hostname;
   } catch (_) {
     return "";
   }
-  const cookie = await ldx.cookies.get({
-    url: url.href,
-    name: "ld_session"
-  });
-  return cookie ? cookie.value : "";
+}
+
+function bestCookie(cookies) {
+  return (cookies || [])
+    .filter((cookie) => cookie && cookie.name === "ld_session")
+    .sort((a, b) => {
+      const pathDelta = (b.path || "").length - (a.path || "").length;
+      if (pathDelta) return pathDelta;
+      return Number(Boolean(b.secure)) - Number(Boolean(a.secure));
+    })[0] || null;
+}
+
+async function findBackendSessionCookie(backendUrl) {
+  for (const url of backendURLCandidates(backendUrl)) {
+    const cookie = await ldx.cookies.get({ url, name: "ld_session" });
+    if (cookie) return { cookie, source: url };
+  }
+
+  const domain = backendHostname(backendUrl);
+  if (domain && ldx.cookies.getAll) {
+    const cookie = bestCookie(await ldx.cookies.getAll({ domain, name: "ld_session" }));
+    if (cookie) return { cookie, source: `domain:${domain}` };
+  }
+
+  return { cookie: null, source: "" };
+}
+
+async function readBackendSessionToken(backendUrl) {
+  const found = await findBackendSessionCookie(backendUrl);
+  return found.cookie ? found.cookie.value : "";
+}
+
+async function connectionStatus() {
+  const cfg = await getConfig();
+  const found = await findBackendSessionCookie(cfg.backendUrl);
+  return {
+    backendUrl: cfg.backendUrl,
+    token: Boolean(cfg.token),
+    webSession: Boolean(found.cookie),
+    cookieDomain: found.cookie ? found.cookie.domain || "" : "",
+    cookiePath: found.cookie ? found.cookie.path || "" : "",
+    cookieSource: found.source
+  };
 }
 
 async function handshake({ email, password } = {}) {
   const { backendUrl } = await getConfig();
   const url = `${normalizeBackendUrl(backendUrl)}/api/ext/handshake`;
   const body = email && password ? { email, password } : {};
+  let foundWebSession = false;
   if (!email && !password) {
     const webSessionToken = await readBackendSessionToken(backendUrl);
-    if (webSessionToken) body.web_session_token = webSessionToken;
+    if (webSessionToken) {
+      foundWebSession = true;
+      body.web_session_token = webSessionToken;
+    }
   }
   const res = await fetch(url, {
     method: "POST",
@@ -109,7 +165,13 @@ async function handshake({ email, password } = {}) {
     credentials: "include",
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(`handshake HTTP ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    if (!email && !password && !foundWebSession && res.status === 400) {
+      throw new Error("no LeetDrill login cookie found; open https://abhiy.xyz/leetdrill in this same browser profile, sign in, then retry");
+    }
+    throw new Error(`handshake HTTP ${res.status}${text ? `: ${text}` : ""}`);
+  }
   const data = await res.json();
   if (!data.token) throw new Error("handshake response missing token");
   await saveConfig({ token: data.token });
@@ -120,12 +182,13 @@ async function handshake({ email, password } = {}) {
 async function ensureConnected() {
   const cfg = await getConfig();
   if (cfg.token) return cfg;
+  let lastConnectError = "";
   try {
     await handshake();
-  } catch (_) {
-    // Callers surface the real API failure if auth is still missing.
+  } catch (err) {
+    lastConnectError = err.message || String(err);
   }
-  return getConfig();
+  return { ...(await getConfig()), lastConnectError };
 }
 
 async function readLeetCodeCookies() {
@@ -200,6 +263,9 @@ ldx.runtime.onMessage.addListener((msg, sender) =>
         }
         case "LEETDRILL_ENSURE_CONNECTED": {
           return { ok: true, data: await ensureConnected() };
+        }
+        case "LEETDRILL_CONNECT_STATUS": {
+          return { ok: true, data: await connectionStatus() };
         }
         case "LEETDRILL_NEXT_PROBLEM": {
           const data = await apiGet("/api/ext/next-problem");

@@ -22,9 +22,33 @@ function setStatus(msg, cls) {
   el.className = "status " + (cls || "");
 }
 
+function statusText(data) {
+  if (!data) return "connection status unavailable";
+  if (data.token) return `connected to ${data.backendUrl}`;
+  if (data.webSession) {
+    const path = data.cookiePath ? ` at ${data.cookiePath}` : "";
+    return `browser login found${path}; click use browser login`;
+  }
+  return "no browser login cookie found; sign in to abhiy.xyz/leetdrill in this same browser profile";
+}
+
+async function refreshStatus() {
+  const res = await send("LEETDRILL_CONNECT_STATUS");
+  if (!res.ok) {
+    setStatus(res.error || "connection status unavailable", "bad");
+    return;
+  }
+  setStatus(statusText(res.data), res.data.token || res.data.webSession ? "ok" : "bad");
+}
+
 $("save").addEventListener("click", async () => {
   const res = await send("LEETDRILL_SAVE_CONFIG", { backendUrl: $("backend").value.trim() });
   setStatus(res.ok ? "saved" : "save failed", res.ok ? "ok" : "bad");
+});
+
+$("check").addEventListener("click", async () => {
+  await send("LEETDRILL_SAVE_CONFIG", { backendUrl: $("backend").value.trim() });
+  await refreshStatus();
 });
 
 $("connect").addEventListener("click", async () => {
@@ -41,8 +65,8 @@ $("connect").addEventListener("click", async () => {
     setStatus("connected - token saved", "ok");
     $("password").value = "";
   } else {
-    setStatus("connect failed: sign in at abhiy.xyz/leetdrill or enter email/password", "bad");
+    setStatus(`connect failed: ${res.error || "unknown error"}`, "bad");
   }
 });
 
-load();
+load().then(refreshStatus);

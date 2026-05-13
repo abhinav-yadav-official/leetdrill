@@ -50,6 +50,14 @@ def main():
         require("ldx." in text, f"{script} must use extension compat wrapper")
         require((EXT / "firefox" / script).read_text() == text, f"firefox {script} must mirror shared {script}")
 
+    compat = (EXT / "compat.js").read_text()
+    background = (EXT / "background.js").read_text()
+    options = (EXT / "options.js").read_text()
+    require("getAll: wrap(api.cookies.getAll" in compat, "compat must expose cookies.getAll for login diagnostics")
+    require("LEETDRILL_CONNECT_STATUS" in background, "background must expose connection status diagnostics")
+    require("findBackendSessionCookie" in background, "background must search backend login cookies robustly")
+    require("LEETDRILL_CONNECT_STATUS" in options, "options must show browser-login diagnostics")
+
     for name in ["compat.js", "inject.js", "popup.html", "options.html"]:
         require((EXT / "firefox" / name).read_text() == (EXT / name).read_text(), f"firefox {name} must mirror shared {name}")
 

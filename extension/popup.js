@@ -21,7 +21,8 @@ async function refresh() {
     status.textContent = "checking LeetDrill login…";
     const connected = await send("LEETDRILL_ENSURE_CONNECTED");
     if (!connected.ok || !connected.data || !connected.data.token) {
-      status.textContent = "sign in to abhiy.xyz/leetdrill, then reopen this popup";
+      status.textContent = (connected.data && connected.data.lastConnectError) ||
+        "sign in to abhiy.xyz/leetdrill in this same browser profile";
       status.classList.add("bad");
       return;
     }
