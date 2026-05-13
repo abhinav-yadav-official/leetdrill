@@ -5,29 +5,109 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{.Title}} · LeetDrill</title>
+    <link rel="icon" type="image/svg+xml" href="{{appPath "/favicon.svg"}}">
+    <script>
+      (function () {
+        var key = "leetdrill-theme";
+        var modes = ["system", "dark", "light"];
+        function clean(mode) {
+          return modes.indexOf(mode) === -1 ? "system" : mode;
+        }
+        function wantsDark(mode) {
+          return mode === "dark" || (mode === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        }
+        function apply(mode) {
+          mode = clean(mode);
+          document.documentElement.classList.toggle("dark", wantsDark(mode));
+          document.documentElement.dataset.theme = mode;
+          var label = mode.charAt(0).toUpperCase() + mode.slice(1);
+          document.querySelectorAll("[data-theme-label]").forEach(function (el) { el.textContent = label; });
+          document.querySelectorAll("[data-theme-toggle]").forEach(function (el) { el.setAttribute("aria-label", "Theme: " + label); });
+        }
+        window.leetdrillTheme = {
+          apply: apply,
+          next: function () {
+            var current = clean(localStorage.getItem(key) || "system");
+            var next = modes[(modes.indexOf(current) + 1) % modes.length];
+            localStorage.setItem(key, next);
+            apply(next);
+          }
+        };
+        try { apply(localStorage.getItem(key) || "system"); } catch (_) { apply("system"); }
+        document.addEventListener("DOMContentLoaded", function () {
+          document.querySelectorAll("[data-theme-toggle]").forEach(function (el) {
+            el.addEventListener("click", window.leetdrillTheme.next);
+          });
+          apply(clean(localStorage.getItem(key) || "system"));
+        });
+        if (window.matchMedia) {
+          window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+            apply(clean(localStorage.getItem(key) || "system"));
+          });
+        }
+      })();
+    </script>
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root { color-scheme: light; }
+      .dark { color-scheme: dark; }
+      .dark body, .dark .bg-zinc-50 { background-color: #09090b !important; color: #f4f4f5 !important; }
+      .dark .bg-white { background-color: #18181b !important; }
+      .dark .bg-zinc-100 { background-color: #27272a !important; }
+      .dark .bg-zinc-900 { background-color: #f4f4f5 !important; color: #09090b !important; }
+      .dark svg[aria-label="LeetDrill logo"] rect { fill: #f4f4f5 !important; }
+      .dark svg[aria-label="LeetDrill logo"] text { fill: #18181b !important; }
+      .dark .hover\:bg-zinc-50:hover, .dark .hover\:bg-zinc-100:hover { background-color: #27272a !important; }
+      .dark .hover\:bg-zinc-800:hover { background-color: #e4e4e7 !important; }
+      .dark .text-zinc-950, .dark .text-zinc-900, .dark .text-zinc-800, .dark .text-zinc-700 { color: #e4e4e7 !important; }
+      .dark .text-zinc-600, .dark .text-zinc-500 { color: #a1a1aa !important; }
+      .dark .text-zinc-400 { color: #71717a !important; }
+      .dark .border-zinc-100, .dark .border-zinc-200, .dark .border-zinc-300 { border-color: #3f3f46 !important; }
+      .dark .divide-zinc-100 > :not([hidden]) ~ :not([hidden]), .dark .divide-zinc-200 > :not([hidden]) ~ :not([hidden]) { border-color: #27272a !important; }
+      .dark .bg-sky-50 { background-color: #082f49 !important; }
+      .dark .border-sky-200 { border-color: #0369a1 !important; }
+      .dark .text-sky-900 { color: #bae6fd !important; }
+      .dark .bg-emerald-50 { background-color: #022c22 !important; }
+      .dark .border-emerald-200 { border-color: #047857 !important; }
+      .dark .text-emerald-950, .dark .text-emerald-900, .dark .text-emerald-800 { color: #a7f3d0 !important; }
+      .dark .rounded-full.bg-emerald-100.text-emerald-800 { color: #065f46 !important; }
+      .dark .bg-rose-50 { background-color: #4c0519 !important; }
+      .dark .border-rose-200 { border-color: #be123c !important; }
+      .dark .text-rose-600 { color: #fda4af !important; }
+      .dark input, .dark select, .dark textarea { background-color: #18181b !important; border-color: #3f3f46 !important; color: #f4f4f5 !important; }
+      .dark input::placeholder, .dark textarea::placeholder { color: #71717a !important; }
+      .dark .shadow-sm { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35) !important; }
+    </style>
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-950">
     <div class="flex min-h-screen">
       <aside class="hidden w-56 shrink-0 border-r border-zinc-200 bg-white px-4 py-5 md:block">
-        <a href="{{appPath "/"}}" class="block text-lg font-semibold tracking-tight">LeetDrill</a>
+        <a href="{{appPath "/"}}" class="flex items-center gap-2 text-lg font-semibold tracking-tight">{{ldLogo}}<span>LeetDrill</span></a>
         <nav class="mt-6 space-y-1 text-sm">
           <a class="{{if eq .NavItem "dashboard"}}bg-zinc-900 text-white{{else}}text-zinc-700 hover:bg-zinc-100{{end}} block rounded-md px-3 py-2" href="{{appPath "/"}}">Dashboard</a>
           <a class="{{if eq .NavItem "today"}}bg-zinc-900 text-white{{else}}text-zinc-700 hover:bg-zinc-100{{end}} block rounded-md px-3 py-2" href="{{appPath "/session/today"}}">Today</a>
+          <a class="{{if eq .NavItem "lists"}}bg-zinc-900 text-white{{else}}text-zinc-700 hover:bg-zinc-100{{end}} block rounded-md px-3 py-2" href="{{appPath "/lists"}}">Lists</a>
           <a class="{{if eq .NavItem "problems"}}bg-zinc-900 text-white{{else}}text-zinc-700 hover:bg-zinc-100{{end}} block rounded-md px-3 py-2" href="{{appPath "/problems"}}">Problems</a>
           <a class="{{if eq .NavItem "patterns"}}bg-zinc-900 text-white{{else}}text-zinc-700 hover:bg-zinc-100{{end}} block rounded-md px-3 py-2" href="{{appPath "/patterns"}}">Patterns</a>
           <a class="{{if eq .NavItem "stats"}}bg-zinc-900 text-white{{else}}text-zinc-700 hover:bg-zinc-100{{end}} block rounded-md px-3 py-2" href="{{appPath "/stats"}}">Stats</a>
           <a class="{{if eq .NavItem "settings"}}bg-zinc-900 text-white{{else}}text-zinc-700 hover:bg-zinc-100{{end}} block rounded-md px-3 py-2" href="{{appPath "/settings"}}">Settings</a>
           <a class="block rounded-md px-3 py-2 text-zinc-700 hover:bg-zinc-100" href="https://abhiy.xyz/shared/leetdrill-extension/" target="_blank" rel="noopener">Extension</a>
         </nav>
+        <button type="button" data-theme-toggle class="mt-6 flex w-full items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100">
+          <span>Theme</span>
+          <span data-theme-label>System</span>
+        </button>
       </aside>
       <main class="min-w-0 flex-1">
         <header class="border-b border-zinc-200 bg-white px-4 py-3 md:hidden">
           <div class="flex items-center justify-between">
-            <a href="{{appPath "/"}}" class="font-semibold">LeetDrill</a>
-            <a href="{{appPath "/session/today"}}" class="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white">Today</a>
+            <a href="{{appPath "/"}}" class="flex items-center gap-2 font-semibold">{{ldLogo}}<span>LeetDrill</span></a>
+            <div class="flex items-center gap-2">
+              <button type="button" data-theme-toggle class="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700">Theme</button>
+              <a href="{{appPath "/session/today"}}" class="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white">Today</a>
+            </div>
           </div>
         </header>
         <section class="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
