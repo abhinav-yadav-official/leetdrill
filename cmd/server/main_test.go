@@ -201,6 +201,8 @@ func TestExtensionConnectPageCarriesTokenForContentScript(t *testing.T) {
 
 	for _, want := range []string{
 		`<meta name="leetdrill-extension-token" content="ext-token">`,
+		`id="manual_token"`,
+		`ext-token`,
 		`LeetDrill extension connected`,
 		`LEETDRILL_WEB_CONNECT_TOKEN`,
 		`LEETDRILL_WEB_CONNECT_DONE`,

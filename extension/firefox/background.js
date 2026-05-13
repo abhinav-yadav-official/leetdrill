@@ -171,6 +171,13 @@ async function saveExtensionTokenFromPage(token, sender) {
   await ldx.action.setBadgeText({ text: "" });
 }
 
+async function saveManualExtensionToken(token) {
+  const cleanToken = String(token || "").trim();
+  if (!cleanToken) throw new Error("extension token missing");
+  await saveConfig({ token: cleanToken });
+  await ldx.action.setBadgeText({ text: "" });
+}
+
 async function openWebConnect() {
   const cfg = await getConfig();
   const url = `${normalizeBackendUrl(cfg.backendUrl)}/extension/connect`;
@@ -300,6 +307,10 @@ ldx.runtime.onMessage.addListener((msg, sender) =>
         }
         case "LEETDRILL_EXTENSION_TOKEN": {
           await saveExtensionTokenFromPage((msg.payload || {}).token, sender);
+          return { ok: true };
+        }
+        case "LEETDRILL_SAVE_TOKEN": {
+          await saveManualExtensionToken((msg.payload || {}).token);
           return { ok: true };
         }
         case "LEETDRILL_CONNECT_STATUS": {

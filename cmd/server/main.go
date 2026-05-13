@@ -313,6 +313,11 @@ const extensionConnectPage = `<!doctype html>
         <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
         <h1 class="mt-3 text-2xl font-semibold tracking-normal">LeetDrill extension connected</h1>
         <p id="leetdrill-extension-status" class="mt-3 text-sm leading-6 text-zinc-600">Saving the extension token in your browser.</p>
+        <div class="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+          <label class="block text-xs font-medium uppercase tracking-normal text-zinc-500" for="manual_token">Manual code</label>
+          <textarea id="manual_token" class="mt-2 h-24 w-full resize-none rounded-md border border-zinc-300 bg-white p-2 font-mono text-xs text-zinc-800" readonly>%s</textarea>
+          <p class="mt-2 text-xs leading-5 text-zinc-500">If the extension does not connect automatically, paste this code into the extension options page.</p>
+        </div>
       </section>
     </main>
     <script>
@@ -334,7 +339,7 @@ const extensionConnectPage = `<!doctype html>
           attempts += 1;
           window.postMessage({ type: "LEETDRILL_WEB_CONNECT_TOKEN", token: token }, window.location.origin);
           if (attempts === 6 && status) {
-            status.textContent = "Still waiting for the extension. Check that Firefox is running LeetDrill Companion 0.1.5 or newer and allows abhiy.xyz.";
+            status.textContent = "Still waiting for the extension. Check that Firefox or Zen is running LeetDrill Companion 0.1.6 or newer, or use the manual code below.";
           }
           if (attempts < 60) window.setTimeout(announce, 500);
         }
@@ -345,7 +350,8 @@ const extensionConnectPage = `<!doctype html>
 </html>`
 
 func renderExtensionConnectPage(token string) string {
-	return fmt.Sprintf(extensionConnectPage, html.EscapeString(token))
+	escaped := html.EscapeString(token)
+	return fmt.Sprintf(extensionConnectPage, escaped, escaped)
 }
 
 func (s *server) handleLoginPage(w http.ResponseWriter, _ *http.Request) {

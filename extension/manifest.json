@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LeetDrill Companion",
   "short_name": "LeetDrill",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Companion for abhiy.xyz/leetdrill. Captures LeetCode submissions and syncs cookies for your practice tracker.",
   "permissions": ["alarms", "cookies", "storage"],
   "host_permissions": [

@@ -51,6 +51,16 @@ $("check").addEventListener("click", async () => {
   await refreshStatus();
 });
 
+$("saveToken").addEventListener("click", async () => {
+  const res = await send("LEETDRILL_SAVE_TOKEN", { token: $("manualToken").value.trim() });
+  if (res.ok) {
+    $("manualToken").value = "";
+    setStatus("connected - manual code saved", "ok");
+  } else {
+    setStatus(`manual connect failed: ${res.error || "unknown error"}`, "bad");
+  }
+});
+
 $("connect").addEventListener("click", async () => {
   await send("LEETDRILL_SAVE_CONFIG", { backendUrl: $("backend").value.trim() });
   const payload = {};

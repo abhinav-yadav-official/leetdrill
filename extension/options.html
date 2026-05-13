@@ -12,13 +12,19 @@
       }
       h1 { font-size: 16px; }
       label { display: block; margin: 12px 0 4px; font-size: 13px; }
-      input {
+      input, textarea {
         width: 100%;
         padding: 6px 8px;
         border: 1px solid #cbd5e1;
         border-radius: 4px;
         font-size: 13px;
         box-sizing: border-box;
+      }
+      textarea {
+        min-height: 70px;
+        resize: vertical;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
       }
       button {
         margin-top: 12px;
@@ -55,6 +61,10 @@
     <button id="connect">use browser login</button>
     <button id="check">check login</button>
     <button id="save">save url only</button>
+
+    <label for="manualToken">Manual code</label>
+    <textarea id="manualToken" placeholder="paste code from LeetDrill connect page"></textarea>
+    <button id="saveToken">save manual code</button>
 
     <div id="status" class="status"></div>
     <p class="hint">
