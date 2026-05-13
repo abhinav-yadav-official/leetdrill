@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"os"
 	"strings"
@@ -13,12 +14,13 @@ import (
 
 // Mailer sends email via SMTPS.
 type Mailer struct {
-	host     string
-	port     string
-	user     string
-	password string
-	from     string
-	appBase  string
+	host      string
+	port      string
+	user      string
+	password  string
+	from      string // full "Display Name <email>" for From header
+	fromEmail string // bare email address for MAIL FROM command
+	appBase   string
 }
 
 // FromEnv constructs a Mailer from SMTP_* environment variables.
@@ -38,13 +40,19 @@ func FromEnv(appBase string) (*Mailer, error) {
 	if from == "" {
 		from = user
 	}
+	// Extract bare email address for SMTP MAIL FROM command.
+	fromEmail := user
+	if addr, err := mail.ParseAddress(from); err == nil {
+		fromEmail = addr.Address
+	}
 	return &Mailer{
-		host:     host,
-		port:     port,
-		user:     user,
-		password: password,
-		from:     from,
-		appBase:  strings.TrimRight(appBase, "/"),
+		host:      host,
+		port:      port,
+		user:      user,
+		password:  password,
+		from:      from,
+		fromEmail: fromEmail,
+		appBase:   strings.TrimRight(appBase, "/"),
 	}, nil
 }
 
@@ -83,7 +91,7 @@ func (m *Mailer) send(to, subject, body string) error {
 	if err := c.Auth(smtp.PlainAuth("", m.user, m.password, m.host)); err != nil {
 		return fmt.Errorf("mailer: auth: %w", err)
 	}
-	if err := c.Mail(m.from); err != nil {
+	if err := c.Mail(m.fromEmail); err != nil {
 		return fmt.Errorf("mailer: MAIL FROM: %w", err)
 	}
 	if err := c.Rcpt(to); err != nil {
