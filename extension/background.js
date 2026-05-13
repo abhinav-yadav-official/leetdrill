@@ -2,7 +2,7 @@
 //
 // Responsibilities:
 //   1. Bootstrap: pull a long-lived token from /api/ext/handshake on install
-//      (or when the user clicks "Connect" in the options page).
+//      using the existing LeetDrill web login when available.
 //   2. Cookie sync: every 6h, read LEETCODE_SESSION + csrftoken via extension cookies
 //      and POST to /api/ext/cookies.
 //   3. Submission relay: content.js forwards submission payloads here; we POST
@@ -39,6 +39,7 @@ function authHeaders(token) {
 }
 
 async function apiPost(path, body) {
+  await ensureConnected();
   const { backendUrl, token } = await getConfig();
   const url = `${backendUrl.replace(/\/$/, "")}${path}`;
   const res = await fetch(url, {
@@ -60,6 +61,7 @@ async function apiPost(path, body) {
 }
 
 async function apiGet(path) {
+  await ensureConnected();
   const { backendUrl, token } = await getConfig();
   const url = `${backendUrl.replace(/\/$/, "")}${path}`;
   const res = await fetch(url, { method: "GET", headers: authHeaders(token) });
@@ -75,13 +77,36 @@ async function apiGet(path) {
   return res.json();
 }
 
+function normalizeBackendUrl(raw) {
+  return (raw || DEFAULTS.backendUrl).replace(/\/$/, "");
+}
+
+async function readBackendSessionToken(backendUrl) {
+  let url;
+  try {
+    url = new URL(normalizeBackendUrl(backendUrl) + "/");
+  } catch (_) {
+    return "";
+  }
+  const cookie = await ldx.cookies.get({
+    url: url.href,
+    name: "ld_session"
+  });
+  return cookie ? cookie.value : "";
+}
+
 async function handshake({ email, password } = {}) {
   const { backendUrl } = await getConfig();
-  const url = `${backendUrl.replace(/\/$/, "")}/api/ext/handshake`;
+  const url = `${normalizeBackendUrl(backendUrl)}/api/ext/handshake`;
   const body = email && password ? { email, password } : {};
+  if (!email && !password) {
+    const webSessionToken = await readBackendSessionToken(backendUrl);
+    if (webSessionToken) body.web_session_token = webSessionToken;
+  }
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error(`handshake HTTP ${res.status}`);
@@ -90,6 +115,17 @@ async function handshake({ email, password } = {}) {
   await saveConfig({ token: data.token });
   await ldx.action.setBadgeText({ text: "" });
   return data;
+}
+
+async function ensureConnected() {
+  const cfg = await getConfig();
+  if (cfg.token) return cfg;
+  try {
+    await handshake();
+  } catch (_) {
+    // Callers surface the real API failure if auth is still missing.
+  }
+  return getConfig();
 }
 
 async function readLeetCodeCookies() {
@@ -121,8 +157,7 @@ async function syncCookies() {
 
 ldx.runtime.onInstalled.addListener(async () => {
   await ldx.alarms.create(COOKIE_ALARM, { periodInMinutes: COOKIE_PERIOD_MIN });
-  // Attempt single-user handshake right away. Fails harmlessly in multi-user
-  // mode; user opens the options page to enter credentials.
+  // Try existing LeetDrill web login or single-user mode right away.
   try {
     await handshake();
   } catch (e) {
@@ -162,6 +197,9 @@ ldx.runtime.onMessage.addListener((msg, sender) =>
         case "LEETDRILL_HANDSHAKE": {
           const data = await handshake(msg.payload || {});
           return { ok: true, data };
+        }
+        case "LEETDRILL_ENSURE_CONNECTED": {
+          return { ok: true, data: await ensureConnected() };
         }
         case "LEETDRILL_NEXT_PROBLEM": {
           const data = await apiGet("/api/ext/next-problem");

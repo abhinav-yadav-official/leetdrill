@@ -988,8 +988,9 @@ func emptyDash(v string) string {
 // ---- Extension API ----
 
 type handshakeReq struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	WebSessionToken string `json:"web_session_token"`
 }
 
 type handshakeResp struct {
@@ -1018,7 +1019,40 @@ func (s *server) handleExtHandshake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req handshakeReq
-	if err := json.Unmarshal(body, &req); err != nil || req.Email == "" || req.Password == "" {
+	if len(strings.TrimSpace(string(body))) > 0 {
+		if err := json.Unmarshal(body, &req); err != nil {
+			http.Error(w, "bad json", http.StatusBadRequest)
+			return
+		}
+	}
+
+	webToken := strings.TrimSpace(req.WebSessionToken)
+	if webToken == "" {
+		if cookie, err := r.Cookie(auth.CookieName); err == nil {
+			webToken = strings.TrimSpace(cookie.Value)
+		}
+	}
+	if webToken != "" {
+		hash, err := auth.HashToken(webToken)
+		if err != nil {
+			http.Error(w, "bad web session", http.StatusUnauthorized)
+			return
+		}
+		userID, err := store.LookupAuthSession(r.Context(), s.store.DB(), store.AuthKindWeb, hash)
+		if err != nil {
+			http.Error(w, "bad web session", http.StatusUnauthorized)
+			return
+		}
+		tok, err := s.authmw.IssueExtToken(r.Context(), userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, handshakeResp{Token: tok, ExpiresIn: int(auth.ExtTokenDuration.Seconds())})
+		return
+	}
+
+	if req.Email == "" || req.Password == "" {
 		http.Error(w, "expected {email,password}", http.StatusBadRequest)
 		return
 	}

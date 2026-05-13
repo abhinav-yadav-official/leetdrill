@@ -23,6 +23,12 @@ SHARED_FILES = [
     "popup.js",
 ]
 
+ICON_FILES = [
+    "icons/icon16.png",
+    "icons/icon48.png",
+    "icons/icon128.png",
+]
+
 
 def load_json(path):
     with path.open() as f:
@@ -45,9 +51,9 @@ def size_label(path):
 
 def render_index(chrome_zip, firefox_zip, firefox_xpi, version):
     rows = [
-        ("Chrome / Edge dev package", chrome_zip.name, size_label(chrome_zip)),
-        ("Firefox unsigned XPI", firefox_xpi.name, size_label(firefox_xpi)),
-        ("Firefox debug ZIP", firefox_zip.name, size_label(firefox_zip)),
+        ("Chrome / Edge store package", chrome_zip.name, size_label(chrome_zip)),
+        ("Firefox signing XPI", firefox_xpi.name, size_label(firefox_xpi)),
+        ("Firefox source ZIP", firefox_zip.name, size_label(firefox_zip)),
     ]
     links = "\n".join(
         f"<li><a href=\"{html.escape(name)}\">{html.escape(label)}</a> "
@@ -131,34 +137,35 @@ def render_index(chrome_zip, firefox_zip, firefox_xpi, version):
   <main>
     <h1>LeetDrill Extension</h1>
     <p>Version {html.escape(version)} packages for the LeetDrill companion extension.</p>
+    <p>LeetDrill is a practice tracker at <a href="https://abhiy.xyz/leetdrill">abhiy.xyz/leetdrill</a>.
+      This extension captures LeetCode submission results, syncs LeetCode cookies
+      only to the LeetDrill backend, and lets the backend import your solved
+      history for daily practice planning.</p>
 
     <ul class="downloads">
       {links}
     </ul>
 
     <div class="note">
-      Browser security rules limit direct installs from this page. Chrome downloads
-      the package for developer-mode loading. Normal Firefox requires a Mozilla-signed
-      XPI before permanent install; this unsigned XPI is for testing or developer builds.
+      Browser security rules limit direct installs from this page. Submit the Chrome
+      package to the Chrome Web Store and the Firefox XPI/source package to AMO for
+      signing before public installation.
     </div>
 
     <h2>Chrome / Edge</h2>
     <ol>
-      <li>Download <code>{html.escape(chrome_zip.name)}</code> and unzip it.</li>
-      <li>Open <code>chrome://extensions</code> or <code>edge://extensions</code>.</li>
-      <li>Enable developer mode, then choose <strong>Load unpacked</strong>.</li>
-      <li>Select the unzipped extension folder.</li>
+      <li>Submit <code>{html.escape(chrome_zip.name)}</code> in the Chrome Web Store dashboard.</li>
+      <li>Use the permission and privacy text from <code>extension/STORE_LISTING.md</code>.</li>
     </ol>
 
     <h2>Firefox</h2>
     <ol>
-      <li>For temporary testing, open <code>about:debugging#/runtime/this-firefox</code>.</li>
-      <li>Choose <strong>Load Temporary Add-on</strong>.</li>
-      <li>Select <code>manifest.json</code> from an unzipped Firefox package, or try the XPI in a developer build.</li>
+      <li>Submit <code>{html.escape(firefox_xpi.name)}</code> to addons.mozilla.org for signing.</li>
+      <li>Attach <code>{html.escape(firefox_zip.name)}</code> as source if requested during review.</li>
     </ol>
 
-    <p>After install, open the extension options and connect to
-      <code>https://abhiy.xyz/leetdrill</code>.</p>
+    <p>After install, sign in at <code>https://abhiy.xyz/leetdrill</code>. The extension
+      can connect using that existing browser login.</p>
   </main>
 </body>
 </html>
@@ -181,8 +188,8 @@ def main():
     if firefox_manifest["version"] != version:
         raise SystemExit("chrome/firefox manifest versions differ")
 
-    chrome_files = ["manifest.json", *SHARED_FILES]
-    firefox_files = ["manifest.json", *SHARED_FILES]
+    chrome_files = ["manifest.json", *SHARED_FILES, *ICON_FILES]
+    firefox_files = ["manifest.json", *SHARED_FILES, *ICON_FILES]
 
     chrome_zip = out / f"leetdrill-chrome-{version}.zip"
     firefox_zip = out / f"leetdrill-firefox-{version}.zip"

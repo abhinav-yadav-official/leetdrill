@@ -20,11 +20,14 @@ def require(condition, message):
 def main():
     chrome = load_json(EXT / "manifest.json")
     firefox = load_json(EXT / "firefox" / "manifest.json")
+    description = chrome.get("description", "")
 
     require(chrome["manifest_version"] == 3, "chrome manifest must stay MV3")
     require(chrome["background"]["service_worker"] == "background.js", "chrome must use service worker")
     require(chrome["background"].get("type") != "module", "chrome background must stay classic for importScripts")
     require((EXT / "compat.js").exists(), "shared compat.js missing")
+    require("abhiy.xyz/leetdrill" in description, "description must identify the LeetDrill web app")
+    require("Spaced" not in description and "SRS" not in description, "description must avoid jargon")
 
     require(firefox["manifest_version"] == 2, "firefox manifest must use MV2")
     require("service_worker" not in firefox.get("background", {}), "firefox must not use background.service_worker")
@@ -33,6 +36,14 @@ def main():
     require(firefox["options_ui"]["page"] == "options.html", "firefox options must use options")
     require("https://abhiy.xyz/*" in firefox["permissions"], "firefox permissions must include production backend")
     require("https://abhiy.xyz/*" in chrome["host_permissions"], "chrome host permissions must include production backend")
+    for host in ["http://localhost/*", "http://127.0.0.1/*"]:
+        require(host not in chrome["host_permissions"], f"chrome store package must not request {host}")
+        require(host not in firefox["permissions"], f"firefox store package must not request {host}")
+    require("tabs" not in firefox["permissions"], "firefox must not request tabs permission for tabs.create")
+    require(chrome["icons"]["128"] == "icons/icon128.png", "chrome must include icons")
+    require(firefox["icons"]["128"] == "icons/icon128.png", "firefox must include icons")
+    require((EXT / "STORE_LISTING.md").exists(), "store listing notes missing")
+    require((EXT / "PRIVACY.md").exists(), "privacy notes missing")
 
     for script in ["background.js", "content.js", "popup.js", "options.js"]:
         text = (EXT / script).read_text()
@@ -41,6 +52,10 @@ def main():
 
     for name in ["compat.js", "inject.js", "popup.html", "options.html"]:
         require((EXT / "firefox" / name).read_text() == (EXT / name).read_text(), f"firefox {name} must mirror shared {name}")
+
+    for icon in ["icon16.png", "icon48.png", "icon128.png"]:
+        require((EXT / "icons" / icon).exists(), f"chrome icon missing: {icon}")
+        require((EXT / "firefox" / "icons" / icon).exists(), f"firefox icon missing: {icon}")
 
 
 if __name__ == "__main__":

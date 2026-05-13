@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -162,6 +163,17 @@ func TestNormalizeCompletionFilter(t *testing.T) {
 		if got := normalizeCompletionFilter(tt.raw); got != tt.want {
 			t.Fatalf("normalizeCompletionFilter(%q) = %q, want %q", tt.raw, got, tt.want)
 		}
+	}
+}
+
+func TestHandshakeRequestSupportsWebSessionToken(t *testing.T) {
+	body := `{"web_session_token":"web-token"}`
+	var req handshakeReq
+	if err := json.Unmarshal([]byte(body), &req); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+	if req.WebSessionToken != "web-token" {
+		t.Fatalf("WebSessionToken = %q, want web-token", req.WebSessionToken)
 	}
 }
 

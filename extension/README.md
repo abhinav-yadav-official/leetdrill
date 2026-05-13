@@ -1,21 +1,21 @@
 # LeetDrill Companion (extension)
 
-Chrome MV3 and Firefox WebExtension companion. Main flows:
+Chrome MV3 and Firefox WebExtension companion for https://abhiy.xyz/leetdrill.
+Main flows:
 
 1. Captures submission verdicts from leetcode.com via a `window.fetch` hook on
    the `/submissions/detail/<id>/check/` polling endpoint.
 2. Syncs `LEETCODE_SESSION` + `csrftoken` cookies to the backend every 6h so
    the backend can run authed GraphQL queries (sync worker).
-3. Triggers a cold-start history import for the connected backend user.
+3. Connects with the user's existing LeetDrill browser login when available.
+4. Triggers a cold-start history import for the connected backend user.
 
 ## Load locally: Chrome
 
 1. Visit `chrome://extensions/`, enable Developer mode.
 2. Click "Load unpacked", point at this directory.
-3. Open the extension's options page, set Backend URL (default
-   `https://abhiy.xyz/leetdrill`), click **Connect**.
-   - Single-user backend: leave email/password blank.
-   - Multi-user backend: fill both.
+3. Sign in at `https://abhiy.xyz/leetdrill`, then open the popup or options page.
+   The extension will use the existing browser login.
 4. Open a LeetCode problem and submit. Console should log
    `[leetdrill] submission applied`.
 5. Click **import history** in the popup after cookies sync to backfill old
@@ -26,10 +26,8 @@ Chrome MV3 and Firefox WebExtension companion. Main flows:
 1. Visit `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on...**.
 3. Select `extension/firefox/manifest.json`.
-4. Open the extension options page, set Backend URL if needed, and click
-   **Connect**.
-   - Multi-user backend: fill email/password.
-   - Single-user backend: leave email/password blank.
+4. Sign in at `https://abhiy.xyz/leetdrill`, then open the popup or options page.
+   The extension will use the existing browser login.
 5. Open a LeetCode problem and submit. Console should log
    `[leetdrill] submission applied`.
 
@@ -48,9 +46,9 @@ task extension:deploy
 ```
 
 The public page is `https://abhiy.xyz/shared/leetdrill-extension/`.
-Chrome/Edge use the zip as a developer-mode unpacked extension package.
-Firefox can open the `.xpi` link, but normal Firefox requires Mozilla signing
-before permanent install.
+Submit the Chrome zip to the Chrome Web Store and the Firefox XPI/source zip to
+addons.mozilla.org for signing. Store listing and permission text lives in
+`STORE_LISTING.md`; privacy text lives in `PRIVACY.md`.
 
 ## Files
 

@@ -38,10 +38,10 @@ $("connect").addEventListener("click", async () => {
   }
   const res = await send("LEETDRILL_HANDSHAKE", payload);
   if (res.ok) {
-    setStatus("connected ✓ token saved", "ok");
+    setStatus("connected - token saved", "ok");
     $("password").value = "";
   } else {
-    setStatus("connect failed: " + (res.error || "unknown"), "bad");
+    setStatus("connect failed: sign in at abhiy.xyz/leetdrill or enter email/password", "bad");
   }
 });
 

@@ -18,9 +18,14 @@ async function refresh() {
     return;
   }
   if (!cfg.data.token) {
-    status.textContent = "not connected — open options";
-    status.classList.add("bad");
-    return;
+    status.textContent = "checking LeetDrill login…";
+    const connected = await send("LEETDRILL_ENSURE_CONNECTED");
+    if (!connected.ok || !connected.data || !connected.data.token) {
+      status.textContent = "sign in to abhiy.xyz/leetdrill, then reopen this popup";
+      status.classList.add("bad");
+      return;
+    }
+    cfg.data = connected.data;
   }
   status.textContent = `connected to ${cfg.data.backendUrl}`;
   status.classList.add("ok");

@@ -38,6 +38,10 @@
   </head>
   <body>
     <h1>LeetDrill connection</h1>
+    <p class="hint">
+      If you are already signed in at <a href="https://abhiy.xyz/leetdrill" target="_blank" rel="noreferrer">abhiy.xyz/leetdrill</a>,
+      use the browser login. Email/password is only a fallback for self-hosted multi-user servers.
+    </p>
     <label for="backend">Backend URL</label>
     <input id="backend" type="text" placeholder="https://abhiy.xyz/leetdrill" />
 
@@ -47,13 +51,13 @@
     <label for="password">Password (multi-user mode)</label>
     <input id="password" type="password" />
 
-    <button id="connect">connect</button>
+    <button id="connect">use browser login</button>
     <button id="save">save url only</button>
 
     <div id="status" class="status"></div>
     <p class="hint">
-      Single-user backend: leave email/password blank and click connect.
-      The backend hands out a long-lived token automatically.
+      LeetDrill stores a local extension token after connecting. It syncs only
+      LeetCode cookies and submission results needed for the practice tracker.
     </p>
 
     <script src="compat.js"></script>
