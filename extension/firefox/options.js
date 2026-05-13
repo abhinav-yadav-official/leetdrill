@@ -54,23 +54,6 @@ $("codePage").addEventListener("click", async () => {
   setStatus(res.ok ? "opened login code page" : `open failed: ${res.error || "unknown error"}`, res.ok ? "ok" : "bad");
 });
 
-$("testConnection").addEventListener("click", async () => {
-  await send("LEETDRILL_SAVE_CONFIG", { backendUrl: $("backend").value.trim() });
-  const res = await send("LEETDRILL_TEST_CONNECTION");
-  if (!res.ok) {
-    setStatus(`test failed: ${res.error || "unknown error"}`, "bad");
-    return;
-  }
-  const data = res.data || {};
-  if (data.connected) {
-    setStatus("connection works: extension can reach abhiy.xyz with the saved code", "ok");
-  } else if (data.permission === "blocked") {
-    setStatus(`browser blocked abhiy.xyz access: ${data.message || "fetch failed"}`, "bad");
-  } else {
-    setStatus(`connection failed: ${data.message || "code missing or rejected"}`, "bad");
-  }
-});
-
 $("manualToken").addEventListener("input", scheduleTokenSave);
 $("manualToken").addEventListener("paste", scheduleTokenSave);
 
