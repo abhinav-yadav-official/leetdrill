@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 
 	"leetdrill/internal/auth"
 	"leetdrill/internal/leetcode"
+	"leetdrill/internal/mailer"
 	"leetdrill/internal/models"
 	"leetdrill/internal/store"
 	ldsync "leetdrill/internal/sync"
@@ -33,13 +35,52 @@ import (
 
 const maxReqBody = 256 * 1024 // 256 KB; submissions can include code
 
+type ipRateLimiter struct {
+	mu      sync.Mutex
+	entries map[string][]time.Time
+	limit   int
+	window  time.Duration
+}
+
+func newIPRateLimiter(limit int, window time.Duration) *ipRateLimiter {
+	return &ipRateLimiter{
+		entries: make(map[string][]time.Time),
+		limit:   limit,
+		window:  window,
+	}
+}
+
+func (l *ipRateLimiter) Allow(ip string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := time.Now()
+	cutoff := now.Add(-l.window)
+	times := l.entries[ip]
+	j := 0
+	for _, t := range times {
+		if t.After(cutoff) {
+			times[j] = t
+			j++
+		}
+	}
+	times = times[:j]
+	if len(times) >= l.limit {
+		l.entries[ip] = times
+		return false
+	}
+	l.entries[ip] = append(times, now)
+	return true
+}
+
 type server struct {
-	addr     string
-	store    *store.Store
-	vault    *vault.Vault
-	authmw   *auth.Authenticator
-	renderer *web.Renderer
-	basePath string
+	addr          string
+	store         *store.Store
+	vault         *vault.Vault
+	authmw        *auth.Authenticator
+	renderer      *web.Renderer
+	basePath      string
+	mailer        *mailer.Mailer
+	resendLimiter *ipRateLimiter
 }
 
 func main() {
@@ -83,13 +124,27 @@ func main() {
 		log.Printf("single-user mode: user_id=%d", uid)
 	}
 
+	var ml *mailer.Mailer
+	if !strings.EqualFold(os.Getenv("SINGLE_USER"), "true") {
+		appBase := os.Getenv("LEETDRILL_APP_BASE")
+		if appBase == "" {
+			appBase = "http://localhost" + addr
+		}
+		ml, err = mailer.FromEnv(appBase)
+		if err != nil {
+			log.Printf("warning: mailer not configured: %v", err)
+		}
+	}
+
 	srv := &server{
-		addr:     addr,
-		store:    st,
-		vault:    v,
-		authmw:   authmw,
-		renderer: renderer,
-		basePath: basePath,
+		addr:          addr,
+		store:         st,
+		vault:         v,
+		authmw:        authmw,
+		renderer:      renderer,
+		basePath:      basePath,
+		mailer:        ml,
+		resendLimiter: newIPRateLimiter(5, time.Hour),
 	}
 	if !strings.EqualFold(os.Getenv("LEETDRILL_SYNC_WORKER"), "false") {
 		(&ldsync.RecentWorker{
