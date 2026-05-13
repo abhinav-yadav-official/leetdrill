@@ -185,6 +185,30 @@ async function openWebConnect() {
   return { url };
 }
 
+async function openApp() {
+  const cfg = await getConfig();
+  const url = normalizeBackendUrl(cfg.backendUrl) + "/";
+  await ldx.tabs.create({ url });
+  return { url };
+}
+
+async function testConnection() {
+  const { backendUrl, token } = await getConfig();
+  if (!token) {
+    return { connected: false, permission: "unknown", message: "no extension token saved" };
+  }
+  const url = `${normalizeBackendUrl(backendUrl)}/api/ext/next-problem`;
+  try {
+    const res = await fetch(url, { method: "GET", headers: authHeaders(token) });
+    const text = await res.text().catch(() => "");
+    if (res.ok) return { connected: true, permission: "ok", status: res.status };
+    if (res.status === 401) return { connected: false, permission: "ok", status: res.status, message: "saved token was rejected" };
+    return { connected: false, permission: "ok", status: res.status, message: text || `HTTP ${res.status}` };
+  } catch (err) {
+    return { connected: false, permission: "blocked", message: err.message || String(err) };
+  }
+}
+
 async function handshake({ email, password } = {}) {
   const { backendUrl } = await getConfig();
   const url = `${normalizeBackendUrl(backendUrl)}/api/ext/handshake`;
@@ -304,6 +328,12 @@ ldx.runtime.onMessage.addListener((msg, sender) =>
         }
         case "LEETDRILL_OPEN_WEB_CONNECT": {
           return { ok: true, data: await openWebConnect() };
+        }
+        case "LEETDRILL_OPEN_APP": {
+          return { ok: true, data: await openApp() };
+        }
+        case "LEETDRILL_TEST_CONNECTION": {
+          return { ok: true, data: await testConnection() };
         }
         case "LEETDRILL_EXTENSION_TOKEN": {
           await saveExtensionTokenFromPage((msg.payload || {}).token, sender);

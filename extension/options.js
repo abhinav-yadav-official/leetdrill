@@ -51,11 +51,39 @@ $("check").addEventListener("click", async () => {
   await refreshStatus();
 });
 
+$("openApp").addEventListener("click", async () => {
+  await send("LEETDRILL_SAVE_CONFIG", { backendUrl: $("backend").value.trim() });
+  const res = await send("LEETDRILL_OPEN_APP");
+  setStatus(res.ok ? "opened LeetDrill" : `open failed: ${res.error || "unknown error"}`, res.ok ? "ok" : "bad");
+});
+
+$("testConnection").addEventListener("click", async () => {
+  await send("LEETDRILL_SAVE_CONFIG", { backendUrl: $("backend").value.trim() });
+  const res = await send("LEETDRILL_TEST_CONNECTION");
+  if (!res.ok) {
+    setStatus(`test failed: ${res.error || "unknown error"}`, "bad");
+    return;
+  }
+  const data = res.data || {};
+  if (data.connected) {
+    setStatus("connection works: Zen can reach abhiy.xyz with the saved token", "ok");
+  } else if (data.permission === "blocked") {
+    setStatus(`Zen blocked abhiy.xyz access: ${data.message || "fetch failed"}`, "bad");
+  } else {
+    setStatus(`connection failed: ${data.message || "token missing or rejected"}`, "bad");
+  }
+});
+
 $("saveToken").addEventListener("click", async () => {
   const res = await send("LEETDRILL_SAVE_TOKEN", { token: $("manualToken").value.trim() });
   if (res.ok) {
     $("manualToken").value = "";
-    setStatus("connected - manual code saved", "ok");
+    const test = await send("LEETDRILL_TEST_CONNECTION");
+    if (test.ok && test.data && test.data.connected) {
+      setStatus("connected - manual code saved and verified", "ok");
+    } else {
+      setStatus(`manual code saved; test failed: ${test.data && test.data.message ? test.data.message : "run test connection"}`, "bad");
+    }
   } else {
     setStatus(`manual connect failed: ${res.error || "unknown error"}`, "bad");
   }
