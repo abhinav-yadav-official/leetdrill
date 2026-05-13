@@ -149,7 +149,10 @@ async function connectionStatus() {
 
 function isTrustedExtensionConnectSender(sender) {
   try {
-    const url = new URL(sender && sender.url ? sender.url : "");
+    const rawURL = (sender && sender.url) ||
+      (sender && sender.tab && sender.tab.url) ||
+      "";
+    const url = new URL(rawURL);
     return url.protocol === "https:" &&
       url.hostname === "abhiy.xyz" &&
       url.pathname === "/leetdrill/extension/connect";

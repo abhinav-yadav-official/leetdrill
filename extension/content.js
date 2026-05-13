@@ -7,11 +7,18 @@
 //      enriched with slug + page-open timing.
 
 (function () {
-  function handleExtensionConnectPage() {
-    const token = document.querySelector('meta[name="leetdrill-extension-token"]')?.content || "";
+  function sendConnectResult(error) {
+    window.postMessage(
+      { type: "LEETDRILL_WEB_CONNECT_DONE", error: error || "" },
+      window.location.origin
+    );
+  }
+
+  function saveExtensionToken(token) {
     const status = document.getElementById("leetdrill-extension-status");
     if (!token) {
       if (status) status.textContent = "Could not find the extension token. Sign in and try again.";
+      sendConnectResult("Could not find the extension token. Sign in and try again.");
       return;
     }
     ldx.runtime
@@ -22,10 +29,24 @@
             ? "Extension connected. You can close this tab."
             : `Extension connect failed: ${(res && res.error) || "unknown error"}`;
         }
+        sendConnectResult(res && res.ok ? "" : `Extension connect failed: ${(res && res.error) || "unknown error"}`);
       })
       .catch((err) => {
-        if (status) status.textContent = `Extension connect failed: ${err.message || String(err)}`;
+        const msg = `Extension connect failed: ${err.message || String(err)}`;
+        if (status) status.textContent = msg;
+        sendConnectResult(msg);
       });
+  }
+
+  function handleExtensionConnectPage() {
+    const meta = document.querySelector('meta[name="leetdrill-extension-token"]');
+    saveExtensionToken(meta ? meta.content : "");
+    window.addEventListener("message", (ev) => {
+      if (ev.source !== window || ev.origin !== window.location.origin) return;
+      const data = ev.data || {};
+      if (data.type !== "LEETDRILL_WEB_CONNECT_TOKEN") return;
+      saveExtensionToken(data.token || "");
+    });
   }
 
   if (window.location.hostname === "abhiy.xyz" &&

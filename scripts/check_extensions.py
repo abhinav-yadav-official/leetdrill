@@ -57,8 +57,11 @@ def main():
     require("LEETDRILL_CONNECT_STATUS" in background, "background must expose connection status diagnostics")
     require("findBackendSessionCookie" in background, "background must search backend login cookies robustly")
     require("LEETDRILL_OPEN_WEB_CONNECT" in background, "background must support first-party web connect")
+    require("sender.tab.url" in background, "background must trust Firefox content-script sender tab URLs")
     require("LEETDRILL_CONNECT_STATUS" in options, "options must show browser-login diagnostics")
-    require("LEETDRILL_EXTENSION_TOKEN" in (EXT / "content.js").read_text(), "content script must accept web connect token")
+    content = (EXT / "content.js").read_text()
+    require("LEETDRILL_EXTENSION_TOKEN" in content, "content script must accept web connect token")
+    require("LEETDRILL_WEB_CONNECT_TOKEN" in content, "content script must listen for web connect broadcasts")
     require("https://abhiy.xyz/leetdrill/extension/connect*" in str(chrome.get("content_scripts", [])), "chrome must inject on web connect page")
     require("https://abhiy.xyz/leetdrill/extension/connect*" in str(firefox.get("content_scripts", [])), "firefox must inject on web connect page")
 

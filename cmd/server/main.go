@@ -315,6 +315,32 @@ const extensionConnectPage = `<!doctype html>
         <p id="leetdrill-extension-status" class="mt-3 text-sm leading-6 text-zinc-600">Saving the extension token in your browser.</p>
       </section>
     </main>
+    <script>
+      (function () {
+        var token = document.querySelector('meta[name="leetdrill-extension-token"]').content;
+        var status = document.getElementById("leetdrill-extension-status");
+        var attempts = 0;
+        var done = false;
+
+        window.addEventListener("message", function (event) {
+          if (event.source !== window || event.origin !== window.location.origin) return;
+          if (!event.data || event.data.type !== "LEETDRILL_WEB_CONNECT_DONE") return;
+          done = true;
+          if (status) status.textContent = event.data.error || "Extension connected. You can close this tab.";
+        });
+
+        function announce() {
+          if (done) return;
+          attempts += 1;
+          window.postMessage({ type: "LEETDRILL_WEB_CONNECT_TOKEN", token: token }, window.location.origin);
+          if (attempts === 6 && status) {
+            status.textContent = "Still waiting for the extension. Check that Firefox is running LeetDrill Companion 0.1.5 or newer and allows abhiy.xyz.";
+          }
+          if (attempts < 60) window.setTimeout(announce, 500);
+        }
+        announce();
+      })();
+    </script>
   </body>
 </html>`
 
