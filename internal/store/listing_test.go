@@ -63,6 +63,55 @@ func TestCountProblemsForUserCanFilterByPattern(t *testing.T) {
 	}
 }
 
+func TestCountProblemsForUserCanFilterBySolvedState(t *testing.T) {
+	tests := []struct {
+		name      string
+		state     string
+		wantSQL   string
+		rejectSQL string
+		wantArgs  []any
+	}{
+		{
+			name:     "solved",
+			state:    "solved",
+			wantSQL:  "COALESCE(up.clean_solves, 0) > 0 OR EXISTS",
+			wantArgs: []any{int64(7)},
+		},
+		{
+			name:      "not solved",
+			state:     "not-solved",
+			wantSQL:   "NOT (COALESCE(up.clean_solves, 0) > 0 OR EXISTS",
+			rejectSQL: "up.status = 'not-solved'",
+			wantArgs:  []any{int64(7)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := &captureQueryRowDB{count: 10}
+
+			_, err := CountProblemsForUser(context.Background(), db, 7, ProblemFilters{State: tt.state})
+			if err != nil {
+				t.Fatalf("CountProblemsForUser() error = %v", err)
+			}
+			if !strings.Contains(db.sql, tt.wantSQL) {
+				t.Fatalf("count query missing %q:\n%s", tt.wantSQL, db.sql)
+			}
+			if tt.rejectSQL != "" && strings.Contains(db.sql, tt.rejectSQL) {
+				t.Fatalf("count query contained rejected SQL %q:\n%s", tt.rejectSQL, db.sql)
+			}
+			if len(db.args) != len(tt.wantArgs) {
+				t.Fatalf("count args = %#v, want %#v", db.args, tt.wantArgs)
+			}
+			for i := range tt.wantArgs {
+				if db.args[i] != tt.wantArgs[i] {
+					t.Fatalf("count args = %#v, want %#v", db.args, tt.wantArgs)
+				}
+			}
+		})
+	}
+}
+
 func TestListProblemsForUserCanFilterByPattern(t *testing.T) {
 	db := &captureQueryDB{}
 
@@ -147,6 +196,7 @@ func TestListPatternsWithStrengthUsesTotalProblemsAsDenominator(t *testing.T) {
 		"COUNT(DISTINCT pp.problem_id) AS total_problems",
 		"COALESCE(COUNT(DISTINCT CASE WHEN up.clean_solves > 0 OR a.verdict = 'AC' THEN pp.problem_id END), 0) AS clean",
 		"/ NULLIF(COUNT(DISTINCT pp.problem_id), 0)::int",
+		"ORDER BY pat.name ASC",
 	} {
 		if !strings.Contains(sql, want) {
 			t.Fatalf("pattern strength query missing %q:\n%s", want, sql)

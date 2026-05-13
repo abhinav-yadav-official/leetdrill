@@ -3,14 +3,16 @@
   <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight">Problems</h1>
-      <p class="mt-1 text-sm text-zinc-600">Filter by SRS state and open detail history.</p>
+      <p class="mt-1 text-sm text-zinc-600">Filter by review state and open detail history.</p>
     </div>
     <form class="flex flex-wrap gap-2" method="get" action="{{appPath "/problems"}}">
       <select class="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="filter">
         <option value="">all</option>
         <option value="due" {{if eq .Data.Filter "due"}}selected{{end}}>due</option>
+        <option value="solved" {{if eq .Data.Filter "solved"}}selected{{end}}>solved</option>
+        <option value="not-solved" {{if eq .Data.Filter "not-solved"}}selected{{end}}>not solved</option>
         <option value="learning" {{if eq .Data.Filter "learning"}}selected{{end}}>learning</option>
-        <option value="review" {{if eq .Data.Filter "review"}}selected{{end}}>review</option>
+        <option value="review" {{if eq .Data.Filter "review"}}selected{{end}}>due later</option>
         <option value="mastered" {{if eq .Data.Filter "mastered"}}selected{{end}}>mastered</option>
         <option value="leech" {{if eq .Data.Filter "leech"}}selected{{end}}>leech</option>
         <option value="new" {{if eq .Data.Filter "new"}}selected{{end}}>new</option>

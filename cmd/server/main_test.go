@@ -13,8 +13,8 @@ func TestLoginPageUsesSplitIntroLayout(t *testing.T) {
 
 	for _, want := range []string{
 		`<meta name="viewport" content="width=device-width, initial-scale=1">`,
-		`Daily review flow for LeetCode practice.`,
-		`Track recent submissions, spaced repetition, and difficult problems from one focused workspace.`,
+		`Daily practice flow for LeetCode.`,
+		`Track recent submissions, review timing, and difficult problems from one focused workspace.`,
 		`invalid email or password.`,
 		`action="/leetdrill/login"`,
 		`href="/leetdrill/signup"`,
@@ -32,7 +32,7 @@ func TestSignupPageUsesSplitIntroLayout(t *testing.T) {
 
 	for _, want := range []string{
 		`<meta name="viewport" content="width=device-width, initial-scale=1">`,
-		`Daily review flow for LeetCode practice.`,
+		`Daily practice flow for LeetCode.`,
 		`Create account`,
 		`action="/leetdrill/signup"`,
 		`href="/leetdrill/login"`,
@@ -129,6 +129,39 @@ func TestProblemPageURLPreservesFilterAndBasePath(t *testing.T) {
 	want = "/problems?page=1"
 	if got != want {
 		t.Fatalf("problemPageURL() = %q, want %q", got, want)
+	}
+}
+
+func TestSessionPollURLPreservesTodayFilter(t *testing.T) {
+	got := sessionPollURL("/leetdrill", 42, "not-solved")
+	want := "/leetdrill/session/42/next?filter=not-solved"
+	if got != want {
+		t.Fatalf("sessionPollURL() = %q, want %q", got, want)
+	}
+
+	got = sessionPollURL("", 42, "")
+	want = "/session/42/next"
+	if got != want {
+		t.Fatalf("sessionPollURL() = %q, want %q", got, want)
+	}
+}
+
+func TestNormalizeCompletionFilter(t *testing.T) {
+	tests := []struct {
+		raw  string
+		want string
+	}{
+		{"", ""},
+		{"solved", "solved"},
+		{"not-solved", "not-solved"},
+		{"unsolved", "not-solved"},
+		{"review", ""},
+	}
+
+	for _, tt := range tests {
+		if got := normalizeCompletionFilter(tt.raw); got != tt.want {
+			t.Fatalf("normalizeCompletionFilter(%q) = %q, want %q", tt.raw, got, tt.want)
+		}
 	}
 }
 

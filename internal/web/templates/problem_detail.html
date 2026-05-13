@@ -6,7 +6,7 @@
       <h1 class="mt-1 text-2xl font-semibold tracking-tight">{{.Data.Problem.Title}}</h1>
       <div class="mt-2 flex flex-wrap gap-2">
         <span class="rounded-full px-2 py-1 text-xs font-medium {{badgeClass .Data.Problem.Difficulty}}">{{.Data.Problem.Difficulty}}</span>
-        <span class="rounded-full px-2 py-1 text-xs font-medium {{statusBadge .Data.State.Status}}">{{.Data.State.Status}}</span>
+        <span class="rounded-full px-2 py-1 text-xs font-medium {{statusBadge .Data.State.Status}}">{{statusLabel .Data.State.Status}}</span>
         {{range .Data.Problem.TopicTags}}<span class="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">{{.Name}}</span>{{end}}
       </div>
     </div>
@@ -35,9 +35,9 @@
           <button class="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50">Mark Mastered</button>
         </form>
       {{end}}
-      <form method="post" action="{{appPath "/problems"}}/{{.Data.Problem.ID}}/triage" onsubmit="return confirm('Reset SRS state for this problem? History will remain but scheduling will restart.')">
+      <form method="post" action="{{appPath "/problems"}}/{{.Data.Problem.ID}}/triage" onsubmit="return confirm('Reset review schedule for this problem? History will remain but scheduling will restart.')">
         <input type="hidden" name="action" value="reset">
-        <button class="rounded-md border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50">Reset SRS</button>
+        <button class="rounded-md border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50">Reset review schedule</button>
       </form>
     </div>
   </section>

@@ -199,8 +199,8 @@ const loginPage = `<!doctype html>
     <main class="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_420px] lg:px-8">
       <section class="max-w-xl">
         <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
-        <h1 class="mt-3 text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">Daily review flow for LeetCode practice.</h1>
-        <p class="mt-4 max-w-lg text-base leading-7 text-zinc-600">Track recent submissions, spaced repetition, and difficult problems from one focused workspace.</p>
+        <h1 class="mt-3 text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">Daily practice flow for LeetCode.</h1>
+        <p class="mt-4 max-w-lg text-base leading-7 text-zinc-600">Track recent submissions, review timing, and difficult problems from one focused workspace.</p>
         <div class="mt-8 grid max-w-md grid-cols-3 gap-3 text-sm">
           <div class="rounded-lg border border-zinc-200 bg-white p-3">
             <div class="text-xs font-medium uppercase tracking-normal text-zinc-500">Queue</div>
@@ -211,8 +211,8 @@ const loginPage = `<!doctype html>
             <div class="mt-2 font-semibold text-zinc-900">Attempts</div>
           </div>
           <div class="rounded-lg border border-zinc-200 bg-white p-3">
-            <div class="text-xs font-medium uppercase tracking-normal text-zinc-500">Review</div>
-            <div class="mt-2 font-semibold text-zinc-900">SRS</div>
+            <div class="text-xs font-medium uppercase tracking-normal text-zinc-500">Plan</div>
+            <div class="mt-2 font-semibold text-zinc-900">Review plan</div>
           </div>
         </div>
       </section>
@@ -251,8 +251,8 @@ const signupPage = `<!doctype html>
     <main class="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_420px] lg:px-8">
       <section class="max-w-xl">
         <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
-        <h1 class="mt-3 text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">Daily review flow for LeetCode practice.</h1>
-        <p class="mt-4 max-w-lg text-base leading-7 text-zinc-600">Track recent submissions, spaced repetition, and difficult problems from one focused workspace.</p>
+        <h1 class="mt-3 text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">Daily practice flow for LeetCode.</h1>
+        <p class="mt-4 max-w-lg text-base leading-7 text-zinc-600">Track recent submissions, review timing, and difficult problems from one focused workspace.</p>
         <div class="mt-8 grid max-w-md grid-cols-3 gap-3 text-sm">
           <div class="rounded-lg border border-zinc-200 bg-white p-3">
             <div class="text-xs font-medium uppercase tracking-normal text-zinc-500">Queue</div>
@@ -263,8 +263,8 @@ const signupPage = `<!doctype html>
             <div class="mt-2 font-semibold text-zinc-900">Attempts</div>
           </div>
           <div class="rounded-lg border border-zinc-200 bg-white p-3">
-            <div class="text-xs font-medium uppercase tracking-normal text-zinc-500">Review</div>
-            <div class="mt-2 font-semibold text-zinc-900">SRS</div>
+            <div class="text-xs font-medium uppercase tracking-normal text-zinc-500">Plan</div>
+            <div class="mt-2 font-semibold text-zinc-900">Review plan</div>
           </div>
         </div>
       </section>
@@ -452,6 +452,7 @@ func (s *server) handleSessionStart(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) handleSessionToday(w http.ResponseWriter, r *http.Request) {
 	uid := auth.UserID(r.Context())
+	filter := normalizeCompletionFilter(r.URL.Query().Get("filter"))
 	sess, err := store.EnsureTodaySession(r.Context(), s.store.DB(), uid, 5)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -467,7 +468,7 @@ func (s *server) handleSessionToday(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	card, err := s.sessionCard(r.Context(), uid, sess)
+	card, err := s.sessionCard(r.Context(), uid, sess, filter)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -476,12 +477,13 @@ func (s *server) handleSessionToday(w http.ResponseWriter, r *http.Request) {
 		Title:   "Today",
 		UserID:  uid,
 		NavItem: "today",
-		Data:    sessionPageData{Card: card},
+		Data:    sessionPageData{Filter: filter, Card: card},
 	})
 }
 
 type sessionPageData struct {
-	Card sessionCardData
+	Filter string
+	Card   sessionCardData
 }
 
 func (s *server) handleSessionNext(w http.ResponseWriter, r *http.Request) {
@@ -512,7 +514,8 @@ func (s *server) handleSessionNext(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	card, err := s.sessionCard(r.Context(), uid, sess)
+	filter := normalizeCompletionFilter(r.URL.Query().Get("filter"))
+	card, err := s.sessionCard(r.Context(), uid, sess, filter)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -523,6 +526,7 @@ func (s *server) handleSessionNext(w http.ResponseWriter, r *http.Request) {
 type sessionCardData struct {
 	Session        *store.Session
 	Problems       []sessionProblem
+	PollURL        string
 	Done           bool
 	CompletedCount int
 	TotalCount     int
@@ -540,9 +544,10 @@ type sessionProblem struct {
 	Journal    string
 }
 
-func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session) (sessionCardData, error) {
+func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session, filter string) (sessionCardData, error) {
 	card := sessionCardData{
 		Session:        sess,
+		PollURL:        sessionPollURL(s.basePath, sess.ID, filter),
 		CompletedCount: len(sess.CompletedProblemIDs),
 		TotalCount:     len(sess.ProblemIDs),
 	}
@@ -553,6 +558,14 @@ func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session
 	}
 
 	for _, pid := range sess.ProblemIDs {
+		completed := completedMap[pid]
+		if filter == "solved" && !completed {
+			continue
+		}
+		if filter == "not-solved" && completed {
+			continue
+		}
+
 		p, err := store.GetProblemByID(ctx, s.store.DB(), pid)
 		if err != nil {
 			return card, err
@@ -576,13 +589,34 @@ func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session
 			URL:        p.URL,
 			Topics:     p.TopicTags,
 			Status:     up.Status,
-			Completed:  completedMap[pid],
+			Completed:  completed,
 			Journal:    journal,
 		})
 	}
 
 	card.Done = card.TotalCount > 0 && card.CompletedCount == card.TotalCount
 	return card, nil
+}
+
+func normalizeCompletionFilter(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "solved":
+		return "solved"
+	case "not-solved", "not_solved", "unsolved":
+		return "not-solved"
+	default:
+		return ""
+	}
+}
+
+func sessionPollURL(basePath string, sessionID int64, filter string) string {
+	path := fmt.Sprintf("/session/%d/next", sessionID)
+	if filter == "" {
+		return web.AppPath(basePath, path)
+	}
+	q := url.Values{}
+	q.Set("filter", filter)
+	return web.AppPath(basePath, path) + "?" + q.Encode()
 }
 
 func (s *server) handleProblems(w http.ResponseWriter, r *http.Request) {

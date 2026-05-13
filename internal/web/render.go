@@ -34,6 +34,7 @@ func NewRendererWithBasePath(basePath string) (*Renderer, error) {
 		"appPath":      func(target string) string { return AppPath(basePath, target) },
 		"badgeClass":   badgeClassForDifficulty,
 		"statusBadge":  badgeClassForStatus,
+		"statusLabel":  labelForStatus,
 		"verdictBadge": badgeClassForVerdict,
 		"upper":        strings.ToUpper,
 		"hasItems":     func(n int) bool { return n > 0 },
@@ -241,6 +242,17 @@ func badgeClassForStatus(s any) string {
 		return "bg-rose-100 text-rose-800"
 	}
 	return "bg-slate-100 text-slate-700"
+}
+
+func labelForStatus(s any) string {
+	switch fmt.Sprint(s) {
+	case "review":
+		return "due later"
+	case "leech":
+		return "needs work"
+	default:
+		return fmt.Sprint(s)
+	}
 }
 
 func badgeClassForVerdict(v any) string {

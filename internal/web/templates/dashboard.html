@@ -2,7 +2,7 @@
 <div class="flex flex-col gap-5">
   {{if .Data.VacationUntil}}
     <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-      <span class="font-bold">Vacation Mode Active.</span> Due reviews are paused until {{fmtTime .Data.VacationUntil}}.
+      <span class="font-bold">Vacation Mode Active.</span> Due practice is paused until {{fmtTime .Data.VacationUntil}}.
       <a href="{{appPath "/settings"}}" class="ml-2 font-medium underline">Disable in Settings</a>
     </div>
   {{end}}
@@ -10,7 +10,7 @@
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
-      <p class="mt-1 text-sm text-zinc-600">Daily review queue and recent submission signal.</p>
+      <p class="mt-1 text-sm text-zinc-600">Daily practice queue and recent submission signal.</p>
     </div>
     <form method="post" action="{{appPath "/session/start"}}">
       <button class="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800">Start today</button>
@@ -60,7 +60,7 @@
       <h2 class="font-medium">Queue</h2>
       <dl class="mt-4 space-y-3 text-sm">
         <div class="flex justify-between"><dt class="text-zinc-500">Due in 24h</dt><dd class="font-medium">{{.Data.Counts.DueIn24h}}</dd></div>
-        <div class="flex justify-between"><dt class="text-zinc-500">Review</dt><dd class="font-medium">{{.Data.Counts.Review}}</dd></div>
+        <div class="flex justify-between"><dt class="text-zinc-500">Due later</dt><dd class="font-medium">{{.Data.Counts.Review}}</dd></div>
         <div class="flex justify-between"><dt class="text-zinc-500">Mastered</dt><dd class="font-medium">{{.Data.Counts.Mastered}}</dd></div>
         <div class="flex justify-between"><dt class="text-zinc-500">Catalog</dt><dd class="font-medium">{{.Data.Counts.TotalProblems}}</dd></div>
       </dl>

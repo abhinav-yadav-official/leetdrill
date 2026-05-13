@@ -20,18 +20,18 @@ type ApplyInput struct {
 	// lookup. Caller (handler) already fetched the problem to validate it.
 	Difficulty models.Difficulty
 
-	StartedAt        time.Time
-	CompletedAt      time.Time
-	Verdict          string // AC/WA/TLE/MLE/RE/CE
-	SubmissionCount  int
-	TimeTakenSec     int
-	RuntimeMs        *int
-	MemoryKB         *int
-	Language         string
-	Code             string
-	Journal          string
-	MistakeTags      []string
-	LeetcodeSubmID   string
+	StartedAt       time.Time
+	CompletedAt     time.Time
+	Verdict         string // AC/WA/TLE/MLE/RE/CE
+	SubmissionCount int
+	TimeTakenSec    int
+	RuntimeMs       *int
+	MemoryKB        *int
+	Language        string
+	Code            string
+	Journal         string
+	MistakeTags     []string
+	LeetcodeSubmID  string
 
 	// Now is injected for testability; if zero, time.Now() is used.
 	Now time.Time
@@ -44,7 +44,7 @@ type ApplyResult struct {
 	UserProblem models.UserProblem
 }
 
-// Apply records an attempt and advances the SRS state atomically.
+// Apply records an attempt and advances the review schedule atomically.
 func (s *Store) Apply(ctx context.Context, in ApplyInput) (ApplyResult, error) {
 	now := in.Now
 	if now.IsZero() {

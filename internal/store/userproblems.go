@@ -12,7 +12,7 @@ import (
 	"leetdrill/internal/srs"
 )
 
-// GetUserProblem returns the user_problems row. Returns a zero-valued srs.NewState()
+// GetUserProblem returns the user_problems row. Returns a zero-valued starting schedule
 // wrapped in models.UserProblem if missing, so callers always have a starting point.
 func GetUserProblem(ctx context.Context, db DBTX, userID, problemID int64) (models.UserProblem, error) {
 	const q = `
@@ -77,7 +77,7 @@ ON CONFLICT (user_id, problem_id) DO UPDATE SET
 }
 
 // InsertSolvedUserProblemIfMissing seeds historical solved problems when
-// LeetCode gives us solved slugs but not submission timestamps. Existing SRS
+// LeetCode gives us solved slugs but not submission timestamps. Existing review schedule
 // rows are never overwritten.
 func InsertSolvedUserProblemIfMissing(ctx context.Context, db DBTX, up models.UserProblem) (bool, error) {
 	const q = `
@@ -98,7 +98,7 @@ ON CONFLICT (user_id, problem_id) DO NOTHING`
 	return tag.RowsAffected() > 0, nil
 }
 
-// TriageUserProblem manually adjusts the SRS state.
+// TriageUserProblem manually adjusts the review schedule.
 func TriageUserProblem(ctx context.Context, db DBTX, userID, problemID int64, action string) error {
 	switch action {
 	case "unleech":
@@ -116,7 +116,7 @@ UPDATE user_problems
  WHERE user_id = $1 AND problem_id = $2`, userID, problemID)
 		return err
 	case "reset":
-		// Hard reset: delete the SRS row. History (attempts) remains.
+		// Hard reset: delete the review row. History (attempts) remains.
 		_, err := db.Exec(ctx, `DELETE FROM user_problems WHERE user_id = $1 AND problem_id = $2`, userID, problemID)
 		return err
 	default:

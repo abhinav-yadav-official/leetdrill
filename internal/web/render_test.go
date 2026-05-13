@@ -195,6 +195,8 @@ func TestProblemsPageIncludesPaginationControls(t *testing.T) {
 		`Unique Paths`,
 		`name="pattern"`,
 		`value="dynamic-programming" selected`,
+		`value="solved"`,
+		`value="not-solved"`,
 		`name="difficulty"`,
 		`value="Medium" selected`,
 		`name="acceptance"`,
@@ -204,6 +206,47 @@ func TestProblemsPageIncludesPaginationControls(t *testing.T) {
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("rendered problems missing pagination %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestTodayPageIncludesSolvedFilter(t *testing.T) {
+	r, err := NewRendererWithBasePath("/leetdrill")
+	if err != nil {
+		t.Fatalf("NewRendererWithBasePath() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	r.Page(rec, "session_today", PageData{
+		Title:   "Today",
+		UserID:  7,
+		NavItem: "today",
+		Data: map[string]any{
+			"Filter": "not-solved",
+			"Card": map[string]any{
+				"Session": map[string]any{"ID": 42},
+				"PollURL": "/leetdrill/session/42/next?filter=not-solved",
+				"Problems": []map[string]any{{
+					"ProblemID":  62,
+					"Title":      "Unique Paths",
+					"Difficulty": "Medium",
+					"Status":     "new",
+					"URL":        "https://leetcode.com/problems/unique-paths/",
+					"Topics":     []any{},
+				}},
+			},
+		},
+	})
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`name="filter"`,
+		`value="solved"`,
+		`value="not-solved" selected`,
+		`hx-get="/leetdrill/session/42/next?filter=not-solved"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered today page missing %q:\n%s", want, body)
 		}
 	}
 }

@@ -39,8 +39,8 @@ type ProblemFilters struct {
 	Acceptance string
 }
 
-// ListProblemsForUser returns problems joined with the user's SRS state.
-// Filter values: "" (all), "due", "learning", "review", "mastered", "leech", "new".
+// ListProblemsForUser returns problems joined with the user's review state.
+// Filter values: "" (all), "due", "learning", "review", "mastered", "leech", "new", "solved", "not-solved".
 func ListProblemsForUser(ctx context.Context, db DBTX, userID int64, filters ProblemFilters, limit, offset int) ([]ProblemListItem, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 50
@@ -165,9 +165,23 @@ func problemStateCondition(state string) string {
 		return fmt.Sprintf(`up.status = '%s'`, state)
 	case "new":
 		return `up.user_id IS NULL`
+	case "solved":
+		return solvedProblemCondition()
+	case "not-solved":
+		return `NOT (` + solvedProblemCondition() + `)`
 	default:
 		return ""
 	}
+}
+
+func solvedProblemCondition() string {
+	return `COALESCE(up.clean_solves, 0) > 0 OR EXISTS (
+    SELECT 1
+      FROM attempts solved_attempt
+     WHERE solved_attempt.user_id = $1
+       AND solved_attempt.problem_id = p.id
+       AND solved_attempt.verdict = 'AC'
+  )`
 }
 
 func acceptanceLowerBound(raw string) (float64, bool) {
@@ -178,14 +192,14 @@ func acceptanceLowerBound(raw string) (float64, bool) {
 	return float64(bound), true
 }
 
-// ProblemDetail bundles a problem with the user's SRS state and history.
+// ProblemDetail bundles a problem with the user's review state and history.
 type ProblemDetail struct {
 	Problem  models.Problem
 	State    models.UserProblem
 	Attempts []models.Attempt
 }
 
-// GetProblemDetail returns a problem + the calling user's SRS state +
+// GetProblemDetail returns a problem + the calling user's review state +
 // up to N recent attempts.
 func GetProblemDetail(ctx context.Context, db DBTX, userID int64, slug string, attemptLimit int) (*ProblemDetail, error) {
 	p, err := GetProblemBySlug(ctx, db, slug)
@@ -314,7 +328,7 @@ LEFT JOIN attempts a
        ON a.problem_id = pp.problem_id AND a.user_id = $1
 GROUP BY pat.id, pat.slug, pat.name
 HAVING COUNT(DISTINCT pp.problem_id) > 0
-ORDER BY (strength) ASC NULLS LAST, total_problems DESC, pat.name ASC`
+ORDER BY pat.name ASC`
 }
 
 // ListPatternProblems returns problems carrying a given pattern slug for the user view.

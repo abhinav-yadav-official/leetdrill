@@ -1,8 +1,8 @@
-// Package srs implements the spaced-repetition scheduler.
+// Package srs implements the review scheduler.
 //
 // Two pure functions, no DB, no time.Now() inside the core logic — the caller
 // passes the clock in. That makes everything trivially testable and means you
-// can replay history (recompute all SRS state from the attempts table) without
+// can replay history (recompute all review state from the attempts table) without
 // surprises.
 //
 // The algorithm is SM-2 adapted for DSA problems:
@@ -71,7 +71,7 @@ type Outcome struct {
 	Difficulty      Difficulty // for normalizing "expected" time
 }
 
-// State is the SRS state of a (user, problem) pair before an attempt is applied.
+// State is the review state of a (user, problem) pair before an attempt is applied.
 // After scoring, the caller persists the new State returned by NextState.
 type State struct {
 	EaseFactor   float64 // SM-2 ease; starts at 2.5, range [1.3, 3.0]
@@ -235,7 +235,7 @@ func classifyStatus(s State) Status {
 	}
 }
 
-// NextState applies a rating to the current SRS state and returns the new state.
+// NextState applies a rating to the current review state and returns the new state.
 //
 // Caller computes next_due_at = now + IntervalDays*24h.
 //

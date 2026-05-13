@@ -377,7 +377,7 @@ func (c *Client) GetUser(ctx context.Context, username string) (*MatchedUser, er
 // Query 4: recentAcSubmissionList — recent accepted submissions (public)
 //
 // Up to 20 most recent ACs for a public profile. This is the sync worker's
-// primary tool: poll every 30 min, find new entries by timestamp, fire SRS
+// primary tool: poll every 30 min, find new entries by timestamp, update the review schedule
 // updates. The endpoint is unauthed which is great — no cookie expiry risk.
 // =============================================================================
 
@@ -418,7 +418,7 @@ func (c *Client) RecentACSubmissions(ctx context.Context, username string, limit
 // Paginated through lastKey + hasNext. Includes WAs/TLEs/etc, not just ACs.
 // Useful for the cold-start backfill: importing not just what was solved but
 // how much struggle it took. Captures the "first-AC after 4 WAs" signal that
-// gives us better SRS ratings than just AC/no-AC.
+// gives us better review ratings than just AC/no-AC.
 // =============================================================================
 
 const querySubmissionList = `

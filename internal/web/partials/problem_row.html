@@ -10,7 +10,7 @@
     </div>
   </td>
   <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-xs font-medium {{badgeClass .Difficulty}}">{{.Difficulty}}</span></td>
-  <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-xs font-medium {{statusBadge .Status}}">{{.Status}}</span></td>
+  <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-xs font-medium {{statusBadge .Status}}">{{statusLabel .Status}}</span></td>
   <td class="px-4 py-3 text-zinc-600">{{fmtTime .NextDueAt}}</td>
   <td class="px-4 py-3 text-zinc-600">{{.TotalAttempts}}</td>
 </tr>
