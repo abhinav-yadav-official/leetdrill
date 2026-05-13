@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -158,6 +159,7 @@ func (s *server) router() http.Handler {
 		r.Get("/settings", s.handleSettings)
 		r.Post("/settings/cold-start", s.handleSettingsColdStart)
 		r.Post("/settings/vacation", s.handleSettingsVacation)
+		r.Get("/extension/connect", s.handleExtensionConnect)
 	})
 
 	r.Route("/api/ext", func(r chi.Router) {
@@ -296,6 +298,30 @@ const signupPage = `<!doctype html>
   </body>
 </html>`
 
+const extensionConnectPage = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="leetdrill-extension-token" content="%s">
+    <title>Extension connected · LeetDrill</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-zinc-50 text-zinc-950">
+    <main class="mx-auto flex min-h-screen max-w-lg items-center px-4 py-10">
+      <section class="w-full rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+        <div class="text-sm font-semibold uppercase tracking-normal text-zinc-500">LeetDrill</div>
+        <h1 class="mt-3 text-2xl font-semibold tracking-normal">LeetDrill extension connected</h1>
+        <p id="leetdrill-extension-status" class="mt-3 text-sm leading-6 text-zinc-600">Saving the extension token in your browser.</p>
+      </section>
+    </main>
+  </body>
+</html>`
+
+func renderExtensionConnectPage(token string) string {
+	return fmt.Sprintf(extensionConnectPage, html.EscapeString(token))
+}
+
 func (s *server) handleLoginPage(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = fmt.Fprintf(w, loginPage, "sign in to continue.", s.appPath("/login"), s.appPath("/signup"))
@@ -389,6 +415,21 @@ func validateSignupForm(email, password, confirm string) (string, string) {
 	default:
 		return email, ""
 	}
+}
+
+func (s *server) handleExtensionConnect(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserID(r.Context())
+	if userID == 0 {
+		http.Error(w, "missing web session", http.StatusUnauthorized)
+		return
+	}
+	token, err := s.authmw.IssueExtToken(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "issue extension token", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = io.WriteString(w, renderExtensionConnectPage(token))
 }
 
 func (s *server) handleLogout(w http.ResponseWriter, r *http.Request) {

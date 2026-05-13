@@ -59,13 +59,19 @@ $("connect").addEventListener("click", async () => {
   if (email && pw) {
     payload.email = email;
     payload.password = pw;
-  }
-  const res = await send("LEETDRILL_HANDSHAKE", payload);
-  if (res.ok) {
-    setStatus("connected - token saved", "ok");
-    $("password").value = "";
+    const res = await send("LEETDRILL_HANDSHAKE", payload);
+    if (res.ok) {
+      setStatus("connected - token saved", "ok");
+      $("password").value = "";
+    } else {
+      setStatus(`connect failed: ${res.error || "unknown error"}`, "bad");
+    }
   } else {
-    setStatus(`connect failed: ${res.error || "unknown error"}`, "bad");
+    const res = await send("LEETDRILL_OPEN_WEB_CONNECT");
+    setStatus(
+      res.ok ? "opened LeetDrill connect tab" : `connect failed: ${res.error || "unknown error"}`,
+      res.ok ? "ok" : "bad"
+    );
   }
 });
 

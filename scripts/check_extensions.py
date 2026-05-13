@@ -56,7 +56,11 @@ def main():
     require("getAll: wrap(api.cookies.getAll" in compat, "compat must expose cookies.getAll for login diagnostics")
     require("LEETDRILL_CONNECT_STATUS" in background, "background must expose connection status diagnostics")
     require("findBackendSessionCookie" in background, "background must search backend login cookies robustly")
+    require("LEETDRILL_OPEN_WEB_CONNECT" in background, "background must support first-party web connect")
     require("LEETDRILL_CONNECT_STATUS" in options, "options must show browser-login diagnostics")
+    require("LEETDRILL_EXTENSION_TOKEN" in (EXT / "content.js").read_text(), "content script must accept web connect token")
+    require("https://abhiy.xyz/leetdrill/extension/connect*" in str(chrome.get("content_scripts", [])), "chrome must inject on web connect page")
+    require("https://abhiy.xyz/leetdrill/extension/connect*" in str(firefox.get("content_scripts", [])), "firefox must inject on web connect page")
 
     for name in ["compat.js", "inject.js", "popup.html", "options.html"]:
         require((EXT / "firefox" / name).read_text() == (EXT / name).read_text(), f"firefox {name} must mirror shared {name}")

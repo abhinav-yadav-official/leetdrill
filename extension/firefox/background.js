@@ -147,6 +147,34 @@ async function connectionStatus() {
   };
 }
 
+function isTrustedExtensionConnectSender(sender) {
+  try {
+    const url = new URL(sender && sender.url ? sender.url : "");
+    return url.protocol === "https:" &&
+      url.hostname === "abhiy.xyz" &&
+      url.pathname === "/leetdrill/extension/connect";
+  } catch (_) {
+    return false;
+  }
+}
+
+async function saveExtensionTokenFromPage(token, sender) {
+  if (!isTrustedExtensionConnectSender(sender)) {
+    throw new Error("untrusted extension connect page");
+  }
+  const cleanToken = String(token || "").trim();
+  if (!cleanToken) throw new Error("extension token missing");
+  await saveConfig({ token: cleanToken });
+  await ldx.action.setBadgeText({ text: "" });
+}
+
+async function openWebConnect() {
+  const cfg = await getConfig();
+  const url = `${normalizeBackendUrl(cfg.backendUrl)}/extension/connect`;
+  await ldx.tabs.create({ url });
+  return { url };
+}
+
 async function handshake({ email, password } = {}) {
   const { backendUrl } = await getConfig();
   const url = `${normalizeBackendUrl(backendUrl)}/api/ext/handshake`;
@@ -263,6 +291,13 @@ ldx.runtime.onMessage.addListener((msg, sender) =>
         }
         case "LEETDRILL_ENSURE_CONNECTED": {
           return { ok: true, data: await ensureConnected() };
+        }
+        case "LEETDRILL_OPEN_WEB_CONNECT": {
+          return { ok: true, data: await openWebConnect() };
+        }
+        case "LEETDRILL_EXTENSION_TOKEN": {
+          await saveExtensionTokenFromPage((msg.payload || {}).token, sender);
+          return { ok: true };
         }
         case "LEETDRILL_CONNECT_STATUS": {
           return { ok: true, data: await connectionStatus() };

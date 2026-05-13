@@ -196,6 +196,19 @@ func TestHandshakeRequestSupportsWebSessionToken(t *testing.T) {
 	}
 }
 
+func TestExtensionConnectPageCarriesTokenForContentScript(t *testing.T) {
+	body := renderExtensionConnectPage("ext-token")
+
+	for _, want := range []string{
+		`<meta name="leetdrill-extension-token" content="ext-token">`,
+		`LeetDrill extension connected`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("extension connect page missing %q:\n%s", want, body)
+		}
+	}
+}
+
 func TestTotalPages(t *testing.T) {
 	tests := []struct {
 		total    int

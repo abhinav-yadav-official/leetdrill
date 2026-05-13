@@ -7,6 +7,33 @@
 //      enriched with slug + page-open timing.
 
 (function () {
+  function handleExtensionConnectPage() {
+    const token = document.querySelector('meta[name="leetdrill-extension-token"]')?.content || "";
+    const status = document.getElementById("leetdrill-extension-status");
+    if (!token) {
+      if (status) status.textContent = "Could not find the extension token. Sign in and try again.";
+      return;
+    }
+    ldx.runtime
+      .sendMessage({ type: "LEETDRILL_EXTENSION_TOKEN", payload: { token } })
+      .then((res) => {
+        if (status) {
+          status.textContent = res && res.ok
+            ? "Extension connected. You can close this tab."
+            : `Extension connect failed: ${(res && res.error) || "unknown error"}`;
+        }
+      })
+      .catch((err) => {
+        if (status) status.textContent = `Extension connect failed: ${err.message || String(err)}`;
+      });
+  }
+
+  if (window.location.hostname === "abhiy.xyz" &&
+      window.location.pathname === "/leetdrill/extension/connect") {
+    handleExtensionConnectPage();
+    return;
+  }
+
   const PAGE_OPENED_AT = Date.now();
 
   function slugFromPath() {
