@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -29,9 +31,17 @@ type ProblemListItem struct {
 	TotalFails    int
 }
 
+// ProblemFilters contains the optional filters used by the /problems listing.
+type ProblemFilters struct {
+	State      string
+	Pattern    string
+	Difficulty string
+	Acceptance string
+}
+
 // ListProblemsForUser returns problems joined with the user's SRS state.
 // Filter values: "" (all), "due", "learning", "review", "mastered", "leech", "new".
-func ListProblemsForUser(ctx context.Context, db DBTX, userID int64, filter string, limit, offset int) ([]ProblemListItem, error) {
+func ListProblemsForUser(ctx context.Context, db DBTX, userID int64, filters ProblemFilters, limit, offset int) ([]ProblemListItem, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 50
 	}
@@ -39,7 +49,11 @@ func ListProblemsForUser(ctx context.Context, db DBTX, userID int64, filter stri
 		offset = 0
 	}
 
-	where := problemFilterWhere(filter)
+	parts := buildProblemQuery(userID, filters)
+	args := append([]any{}, parts.args...)
+	args = append(args, limit, offset)
+	limitParam := len(args) - 1
+	offsetParam := len(args)
 
 	q := `
 SELECT p.id, p.leetcode_slug, COALESCE(p.leetcode_frontend_id, ''), p.title, p.difficulty, p.url, p.topic_tags,
@@ -50,14 +64,11 @@ SELECT p.id, p.leetcode_slug, COALESCE(p.leetcode_frontend_id, ''), p.title, p.d
 FROM problems p
 LEFT JOIN user_problems up
   ON up.user_id = $1 AND up.problem_id = p.id
-` + where + `
-ORDER BY
-  CASE WHEN up.next_due_at IS NULL THEN 1 ELSE 0 END,
-  up.next_due_at ASC,
-  p.leetcode_frontend_id::int ASC NULLS LAST
-LIMIT $2 OFFSET $3`
+` + parts.joins + parts.where + fmt.Sprintf(`
+ORDER BY p.leetcode_frontend_id::int ASC NULLS LAST, p.id ASC
+LIMIT $%d OFFSET $%d`, limitParam, offsetParam)
 
-	rows, err := db.Query(ctx, q, userID, limit, offset)
+	rows, err := db.Query(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list problems: %w", err)
 	}
@@ -83,32 +94,88 @@ LIMIT $2 OFFSET $3`
 	return out, rows.Err()
 }
 
-func CountProblemsForUser(ctx context.Context, db DBTX, userID int64, filter string) (int, error) {
+func CountProblemsForUser(ctx context.Context, db DBTX, userID int64, filters ProblemFilters) (int, error) {
+	parts := buildProblemQuery(userID, filters)
 	q := `
 SELECT COUNT(*)
 FROM problems p
 LEFT JOIN user_problems up
   ON up.user_id = $1 AND up.problem_id = p.id
-` + problemFilterWhere(filter)
+` + parts.joins + parts.where
 	var count int
-	if err := db.QueryRow(ctx, q, userID).Scan(&count); err != nil {
+	if err := db.QueryRow(ctx, q, parts.args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count problems: %w", err)
 	}
 	return count, nil
 }
 
-func problemFilterWhere(filter string) string {
-	switch filter {
+type problemQueryParts struct {
+	joins string
+	where string
+	args  []any
+}
+
+func buildProblemQuery(userID int64, filters ProblemFilters) problemQueryParts {
+	args := []any{userID}
+	var joins []string
+	var where []string
+
+	if pattern := strings.TrimSpace(filters.Pattern); pattern != "" {
+		args = append(args, pattern)
+		joins = append(joins, fmt.Sprintf(`
+JOIN problem_patterns pp ON pp.problem_id = p.id
+JOIN patterns pat ON pat.id = pp.pattern_id AND pat.slug = $%d`, len(args)))
+	}
+
+	if condition := problemStateCondition(filters.State); condition != "" {
+		where = append(where, condition)
+	}
+	switch filters.Difficulty {
+	case string(models.DifficultyEasy), string(models.DifficultyMedium), string(models.DifficultyHard):
+		args = append(args, filters.Difficulty)
+		where = append(where, fmt.Sprintf("p.difficulty = $%d", len(args)))
+	}
+	if lower, ok := acceptanceLowerBound(filters.Acceptance); ok {
+		args = append(args, lower)
+		lowerParam := len(args)
+		if lower >= 90 {
+			where = append(where, fmt.Sprintf("p.ac_rate >= $%d", lowerParam))
+		} else {
+			args = append(args, lower+10)
+			where = append(where, fmt.Sprintf("p.ac_rate >= $%d AND p.ac_rate < $%d", lowerParam, len(args)))
+		}
+	}
+
+	parts := problemQueryParts{args: args}
+	if len(joins) > 0 {
+		parts.joins = strings.Join(joins, "\n") + "\n"
+	}
+	if len(where) > 0 {
+		parts.where = "WHERE " + strings.Join(where, "\n  AND ") + "\n"
+	}
+	return parts
+}
+
+func problemStateCondition(state string) string {
+	switch state {
 	case "due":
-		return `WHERE up.next_due_at IS NOT NULL AND up.next_due_at <= now()
+		return `up.next_due_at IS NOT NULL AND up.next_due_at <= now()
 		         AND up.status NOT IN ('leech','new','mastered')`
 	case "learning", "review", "mastered", "leech":
-		return fmt.Sprintf(`WHERE up.status = '%s'`, filter)
+		return fmt.Sprintf(`up.status = '%s'`, state)
 	case "new":
-		return `WHERE up.user_id IS NULL`
+		return `up.user_id IS NULL`
 	default:
 		return ""
 	}
+}
+
+func acceptanceLowerBound(raw string) (float64, bool) {
+	bound, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || bound < 0 || bound > 90 || bound%10 != 0 {
+		return 0, false
+	}
+	return float64(bound), true
 }
 
 // ProblemDetail bundles a problem with the user's SRS state and history.
@@ -203,24 +270,7 @@ type PatternStrength struct {
 }
 
 func ListPatternsWithStrength(ctx context.Context, db DBTX, userID int64) ([]PatternStrength, error) {
-	const q = `
-SELECT
-  pat.id, pat.slug, pat.name,
-  COUNT(DISTINCT pp.problem_id) AS total_problems,
-  COALESCE(SUM(CASE WHEN a.id IS NOT NULL THEN 1 ELSE 0 END), 0) AS attempts,
-  COALESCE(SUM(CASE WHEN a.derived_rating IN ('normal','strong') THEN 1 ELSE 0 END), 0) AS clean,
-  COALESCE(SUM(CASE WHEN a.derived_rating = 'failed' THEN 1 ELSE 0 END), 0) AS failed,
-  CASE WHEN COUNT(a.id) = 0 THEN 0
-       ELSE (SUM(CASE WHEN a.derived_rating IN ('normal','strong') THEN 1 ELSE 0 END)::int * 100)
-            / NULLIF(COUNT(a.id), 0)::int
-  END AS strength
-FROM patterns pat
-LEFT JOIN problem_patterns pp ON pp.pattern_id = pat.id
-LEFT JOIN attempts a
-       ON a.problem_id = pp.problem_id AND a.user_id = $1
-GROUP BY pat.id, pat.slug, pat.name
-HAVING COUNT(DISTINCT pp.problem_id) > 0
-ORDER BY (strength) ASC NULLS LAST, total_problems DESC, pat.name ASC`
+	q := patternsWithStrengthSQL()
 	rows, err := db.Query(ctx, q, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list patterns: %w", err)
@@ -244,13 +294,36 @@ ORDER BY (strength) ASC NULLS LAST, total_problems DESC, pat.name ASC`
 	return out, rows.Err()
 }
 
+func patternsWithStrengthSQL() string {
+	return `
+SELECT
+  pat.id, pat.slug, pat.name,
+  COUNT(DISTINCT pp.problem_id) AS total_problems,
+  COALESCE(COUNT(DISTINCT CASE WHEN a.id IS NOT NULL THEN a.problem_id END), 0) AS attempts,
+  COALESCE(COUNT(DISTINCT CASE WHEN up.clean_solves > 0 THEN up.problem_id END), 0) AS clean,
+  COALESCE(COUNT(DISTINCT CASE WHEN up.total_fails > 0 THEN up.problem_id END), 0) AS failed,
+  CASE WHEN COUNT(DISTINCT pp.problem_id) = 0 THEN 0
+       ELSE (COUNT(DISTINCT CASE WHEN up.clean_solves > 0 THEN up.problem_id END)::int * 100)
+            / NULLIF(COUNT(DISTINCT pp.problem_id), 0)::int
+  END AS strength
+FROM patterns pat
+LEFT JOIN problem_patterns pp ON pp.pattern_id = pat.id
+LEFT JOIN user_problems up
+       ON up.problem_id = pp.problem_id AND up.user_id = $1
+LEFT JOIN attempts a
+       ON a.problem_id = pp.problem_id AND a.user_id = $1
+GROUP BY pat.id, pat.slug, pat.name
+HAVING COUNT(DISTINCT pp.problem_id) > 0
+ORDER BY (strength) ASC NULLS LAST, total_problems DESC, pat.name ASC`
+}
+
 // ListPatternProblems returns problems carrying a given pattern slug for the user view.
 func ListPatternProblems(ctx context.Context, db DBTX, userID int64, patternSlug string, limit int) ([]ProblemListItem, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
 	const q = `
-SELECT p.id, p.leetcode_slug, p.title, p.difficulty, p.url, p.topic_tags,
+SELECT p.id, p.leetcode_slug, COALESCE(p.leetcode_frontend_id, ''), p.title, p.difficulty, p.url, p.topic_tags,
        COALESCE(up.status, 'new') AS status,
        up.next_due_at, COALESCE(up.interval_days, 0),
        COALESCE(up.streak, 0), COALESCE(up.total_attempts, 0),
@@ -260,10 +333,7 @@ JOIN problem_patterns pp ON pp.problem_id = p.id
 JOIN patterns pat ON pat.id = pp.pattern_id AND pat.slug = $2
 LEFT JOIN user_problems up
   ON up.user_id = $1 AND up.problem_id = p.id
-ORDER BY
-  CASE WHEN up.status IS NULL THEN 1 ELSE 0 END,
-  up.next_due_at ASC NULLS LAST,
-  p.leetcode_frontend_id::int ASC NULLS LAST
+ORDER BY p.leetcode_frontend_id::int ASC NULLS LAST, p.id ASC
 LIMIT $3`
 	rows, err := db.Query(ctx, q, userID, patternSlug, limit)
 	if err != nil {
@@ -276,7 +346,7 @@ LIMIT $3`
 		var tags []byte
 		var diff, status string
 		if err := rows.Scan(
-			&r.ProblemID, &r.Slug, &r.Title, &diff, &r.URL, &tags,
+			&r.ProblemID, &r.Slug, &r.LeetcodeID, &r.Title, &diff, &r.URL, &tags,
 			&status, &r.NextDueAt, &r.IntervalDays, &r.Streak, &r.TotalAttempts, &r.TotalFails,
 		); err != nil {
 			return nil, fmt.Errorf("scan problem: %w", err)

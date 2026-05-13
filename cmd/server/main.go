@@ -587,10 +587,15 @@ func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session
 
 func (s *server) handleProblems(w http.ResponseWriter, r *http.Request) {
 	uid := auth.UserID(r.Context())
-	filter := r.URL.Query().Get("filter")
+	filters := store.ProblemFilters{
+		State:      r.URL.Query().Get("filter"),
+		Pattern:    strings.TrimSpace(r.URL.Query().Get("pattern")),
+		Difficulty: normalizeDifficultyFilter(r.URL.Query().Get("difficulty")),
+		Acceptance: normalizeAcceptanceFilter(r.URL.Query().Get("acceptance")),
+	}
 	page := parsePage(r.URL.Query().Get("page"))
 	const pageSize = 100
-	total, err := store.CountProblemsForUser(r.Context(), s.store.DB(), uid, filter)
+	total, err := store.CountProblemsForUser(r.Context(), s.store.DB(), uid, filters)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -600,7 +605,12 @@ func (s *server) handleProblems(w http.ResponseWriter, r *http.Request) {
 		page = totalPageCount
 	}
 	offset := (page - 1) * pageSize
-	items, err := store.ListProblemsForUser(r.Context(), s.store.DB(), uid, filter, pageSize, offset)
+	items, err := store.ListProblemsForUser(r.Context(), s.store.DB(), uid, filters, pageSize, offset)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	patterns, err := store.ListPatternsWithStrength(r.Context(), s.store.DB(), uid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -616,33 +626,48 @@ func (s *server) handleProblems(w http.ResponseWriter, r *http.Request) {
 		UserID:  uid,
 		NavItem: "problems",
 		Data: problemsPageData{
-			Filter:     filter,
-			Problems:   items,
-			Page:       page,
-			TotalPages: totalPageCount,
-			TotalCount: total,
-			Start:      start,
-			End:        end,
-			HasPrev:    page > 1,
-			HasNext:    page < totalPageCount,
-			PrevURL:    problemPageURL(s.basePath, filter, page-1),
-			NextURL:    problemPageURL(s.basePath, filter, page+1),
+			Filter:            filters.State,
+			Pattern:           filters.Pattern,
+			Difficulty:        filters.Difficulty,
+			Acceptance:        filters.Acceptance,
+			AcceptanceBuckets: acceptanceBuckets(),
+			Patterns:          patterns,
+			Problems:          items,
+			Page:              page,
+			TotalPages:        totalPageCount,
+			TotalCount:        total,
+			Start:             start,
+			End:               end,
+			HasPrev:           page > 1,
+			HasNext:           page < totalPageCount,
+			PrevURL:           problemPageURL(s.basePath, filters, page-1),
+			NextURL:           problemPageURL(s.basePath, filters, page+1),
 		},
 	})
 }
 
 type problemsPageData struct {
-	Filter     string
-	Problems   []store.ProblemListItem
-	Page       int
-	TotalPages int
-	TotalCount int
-	Start      int
-	End        int
-	HasPrev    bool
-	HasNext    bool
-	PrevURL    string
-	NextURL    string
+	Filter            string
+	Pattern           string
+	Difficulty        string
+	Acceptance        string
+	AcceptanceBuckets []acceptanceBucket
+	Patterns          []store.PatternStrength
+	Problems          []store.ProblemListItem
+	Page              int
+	TotalPages        int
+	TotalCount        int
+	Start             int
+	End               int
+	HasPrev           bool
+	HasNext           bool
+	PrevURL           string
+	NextURL           string
+}
+
+type acceptanceBucket struct {
+	Value string
+	Label string
 }
 
 func totalPages(total, pageSize int) int {
@@ -663,16 +688,61 @@ func parsePage(raw string) int {
 	return page
 }
 
-func problemPageURL(basePath, filter string, page int) string {
+func problemPageURL(basePath string, filters store.ProblemFilters, page int) string {
 	if page < 1 {
 		page = 1
 	}
 	q := url.Values{}
-	if filter != "" {
-		q.Set("filter", filter)
+	if filters.Acceptance != "" {
+		q.Set("acceptance", filters.Acceptance)
+	}
+	if filters.Difficulty != "" {
+		q.Set("difficulty", filters.Difficulty)
+	}
+	if filters.State != "" {
+		q.Set("filter", filters.State)
+	}
+	if filters.Pattern != "" {
+		q.Set("pattern", filters.Pattern)
 	}
 	q.Set("page", strconv.Itoa(page))
 	return web.AppPath(basePath, "/problems") + "?" + q.Encode()
+}
+
+func normalizeDifficultyFilter(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "easy":
+		return string(models.DifficultyEasy)
+	case "medium", "mid":
+		return string(models.DifficultyMedium)
+	case "hard", "high":
+		return string(models.DifficultyHard)
+	default:
+		return ""
+	}
+}
+
+func normalizeAcceptanceFilter(raw string) string {
+	bound, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || bound < 0 || bound > 90 || bound%10 != 0 {
+		return ""
+	}
+	return strconv.Itoa(bound)
+}
+
+func acceptanceBuckets() []acceptanceBucket {
+	buckets := make([]acceptanceBucket, 0, 10)
+	for lower := 0; lower <= 90; lower += 10 {
+		upper := lower + 9
+		if lower == 90 {
+			upper = 100
+		}
+		buckets = append(buckets, acceptanceBucket{
+			Value: strconv.Itoa(lower),
+			Label: fmt.Sprintf("%d-%d%%", lower, upper),
+		})
+	}
+	return buckets
 }
 
 func (s *server) handleProblemDetail(w http.ResponseWriter, r *http.Request) {

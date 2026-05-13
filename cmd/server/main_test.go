@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"leetdrill/internal/store"
 )
 
 func TestLoginPageUsesSplitIntroLayout(t *testing.T) {
@@ -112,13 +114,18 @@ func TestParsePage(t *testing.T) {
 }
 
 func TestProblemPageURLPreservesFilterAndBasePath(t *testing.T) {
-	got := problemPageURL("/leetdrill", "due", 2)
-	want := "/leetdrill/problems?filter=due&page=2"
+	got := problemPageURL("/leetdrill", store.ProblemFilters{
+		State:      "due",
+		Pattern:    "dynamic-programming",
+		Difficulty: "Medium",
+		Acceptance: "70",
+	}, 2)
+	want := "/leetdrill/problems?acceptance=70&difficulty=Medium&filter=due&page=2&pattern=dynamic-programming"
 	if got != want {
 		t.Fatalf("problemPageURL() = %q, want %q", got, want)
 	}
 
-	got = problemPageURL("", "", 1)
+	got = problemPageURL("", store.ProblemFilters{}, 1)
 	want = "/problems?page=1"
 	if got != want {
 		t.Fatalf("problemPageURL() = %q, want %q", got, want)

@@ -154,7 +154,18 @@ func TestProblemsPageIncludesPaginationControls(t *testing.T) {
 		UserID:  7,
 		NavItem: "problems",
 		Data: map[string]any{
-			"Filter": "due",
+			"Filter":     "due",
+			"Pattern":    "dynamic-programming",
+			"Difficulty": "Medium",
+			"Acceptance": "70",
+			"AcceptanceBuckets": []map[string]string{{
+				"Value": "70",
+				"Label": "70-79%",
+			}},
+			"Patterns": []map[string]any{{
+				"Slug": "dynamic-programming",
+				"Name": "Dynamic Programming",
+			}},
 			"Problems": []map[string]any{{
 				"Slug":          "unique-paths",
 				"LeetcodeID":    "62",
@@ -169,8 +180,8 @@ func TestProblemsPageIncludesPaginationControls(t *testing.T) {
 			"TotalCount": 327,
 			"Start":      101,
 			"End":        200,
-			"PrevURL":    "/leetdrill/problems?filter=due&page=1",
-			"NextURL":    "/leetdrill/problems?filter=due&page=3",
+			"PrevURL":    "/leetdrill/problems?acceptance=70&difficulty=Medium&filter=due&page=1&pattern=dynamic-programming",
+			"NextURL":    "/leetdrill/problems?acceptance=70&difficulty=Medium&filter=due&page=3&pattern=dynamic-programming",
 			"HasPrev":    true,
 			"HasNext":    true,
 		},
@@ -182,11 +193,52 @@ func TestProblemsPageIncludesPaginationControls(t *testing.T) {
 		`101-200 of 327 problems`,
 		`#62`,
 		`Unique Paths`,
-		`href="/leetdrill/problems?filter=due&amp;page=1"`,
-		`href="/leetdrill/problems?filter=due&amp;page=3"`,
+		`name="pattern"`,
+		`value="dynamic-programming" selected`,
+		`name="difficulty"`,
+		`value="Medium" selected`,
+		`name="acceptance"`,
+		`value="70" selected`,
+		`href="/leetdrill/problems?acceptance=70&amp;difficulty=Medium&amp;filter=due&amp;page=1&amp;pattern=dynamic-programming"`,
+		`href="/leetdrill/problems?acceptance=70&amp;difficulty=Medium&amp;filter=due&amp;page=3&amp;pattern=dynamic-programming"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("rendered problems missing pagination %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestPatternsPageLinksToPatternFilteredProblems(t *testing.T) {
+	r, err := NewRendererWithBasePath("/leetdrill")
+	if err != nil {
+		t.Fatalf("NewRendererWithBasePath() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	r.Page(rec, "patterns", PageData{
+		Title:   "Patterns",
+		UserID:  7,
+		NavItem: "patterns",
+		Data: map[string]any{
+			"Patterns": []map[string]any{{
+				"Slug":          "dynamic-programming",
+				"Name":          "Dynamic Programming",
+				"StrengthPct":   4,
+				"CleanSolves":   29,
+				"TotalProblems": 651,
+				"Failures":      0,
+			}},
+		},
+	})
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`href="/leetdrill/problems?pattern=dynamic-programming"`,
+		`29 solved · 651 problems`,
+		`4%`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered patterns missing %q:\n%s", want, body)
 		}
 	}
 }

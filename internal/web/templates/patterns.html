@@ -6,7 +6,7 @@
   </div>
   <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     {{range .Data.Patterns}}
-      <a href="{{appPath "/problems"}}?filter=all" class="rounded-lg border border-zinc-200 bg-white p-4 hover:border-zinc-400">
+      <a href="{{appPath "/problems"}}?pattern={{.Slug}}" class="rounded-lg border border-zinc-200 bg-white p-4 hover:border-zinc-400">
         <div class="flex items-start justify-between gap-3">
           <h2 class="font-medium">{{.Name}}</h2>
           <span class="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">{{.StrengthPct}}%</span>
@@ -14,7 +14,7 @@
         <div class="mt-3 h-2 rounded-full bg-zinc-100">
           <div class="h-2 rounded-full bg-emerald-500" style="width: {{.StrengthPct}}%"></div>
         </div>
-        <p class="mt-3 text-sm text-zinc-600">{{.UserAttempts}} attempts · {{.Failures}} failed · {{.TotalProblems}} problems</p>
+        <p class="mt-3 text-sm text-zinc-600">{{.CleanSolves}} solved · {{.TotalProblems}} problems · {{.Failures}} failed</p>
       </a>
     {{else}}
       <div class="rounded-lg border border-zinc-200 bg-white p-8 text-sm text-zinc-500">No patterns yet. Run ingest first.</div>

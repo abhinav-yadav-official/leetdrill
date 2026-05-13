@@ -5,7 +5,7 @@
       <h1 class="text-2xl font-semibold tracking-tight">Problems</h1>
       <p class="mt-1 text-sm text-zinc-600">Filter by SRS state and open detail history.</p>
     </div>
-    <form class="flex gap-2" method="get" action="{{appPath "/problems"}}">
+    <form class="flex flex-wrap gap-2" method="get" action="{{appPath "/problems"}}">
       <select class="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="filter">
         <option value="">all</option>
         <option value="due" {{if eq .Data.Filter "due"}}selected{{end}}>due</option>
@@ -14,6 +14,24 @@
         <option value="mastered" {{if eq .Data.Filter "mastered"}}selected{{end}}>mastered</option>
         <option value="leech" {{if eq .Data.Filter "leech"}}selected{{end}}>leech</option>
         <option value="new" {{if eq .Data.Filter "new"}}selected{{end}}>new</option>
+      </select>
+      <select class="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="pattern">
+        <option value="">all patterns</option>
+        {{range .Data.Patterns}}
+          <option value="{{.Slug}}" {{if eq $.Data.Pattern .Slug}}selected{{end}}>{{.Name}}</option>
+        {{end}}
+      </select>
+      <select class="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="difficulty">
+        <option value="">all difficulty</option>
+        <option value="Easy" {{if eq .Data.Difficulty "Easy"}}selected{{end}}>easy</option>
+        <option value="Medium" {{if eq .Data.Difficulty "Medium"}}selected{{end}}>medium</option>
+        <option value="Hard" {{if eq .Data.Difficulty "Hard"}}selected{{end}}>hard</option>
+      </select>
+      <select class="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="acceptance">
+        <option value="">all acceptance</option>
+        {{range .Data.AcceptanceBuckets}}
+          <option value="{{.Value}}" {{if eq $.Data.Acceptance .Value}}selected{{end}}>{{.Label}}</option>
+        {{end}}
       </select>
       <input type="hidden" name="page" value="1">
       <button class="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white">Apply</button>
