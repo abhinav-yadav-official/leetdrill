@@ -264,7 +264,7 @@ type PatternStrength struct {
 	Name          string
 	TotalProblems int // problems carrying this pattern
 	UserAttempts  int // attempts on problems carrying this pattern
-	CleanSolves   int // attempts with derived_rating IN ('normal','strong')
+	CleanSolves   int // distinct problems solved on LeetCode
 	Failures      int // derived_rating = 'failed'
 	StrengthPct   int // 0-100, computed in SQL
 }
@@ -300,10 +300,10 @@ SELECT
   pat.id, pat.slug, pat.name,
   COUNT(DISTINCT pp.problem_id) AS total_problems,
   COALESCE(COUNT(DISTINCT CASE WHEN a.id IS NOT NULL THEN a.problem_id END), 0) AS attempts,
-  COALESCE(COUNT(DISTINCT CASE WHEN up.clean_solves > 0 THEN up.problem_id END), 0) AS clean,
+  COALESCE(COUNT(DISTINCT CASE WHEN up.clean_solves > 0 OR a.verdict = 'AC' THEN pp.problem_id END), 0) AS clean,
   COALESCE(COUNT(DISTINCT CASE WHEN up.total_fails > 0 THEN up.problem_id END), 0) AS failed,
   CASE WHEN COUNT(DISTINCT pp.problem_id) = 0 THEN 0
-       ELSE (COUNT(DISTINCT CASE WHEN up.clean_solves > 0 THEN up.problem_id END)::int * 100)
+       ELSE (COUNT(DISTINCT CASE WHEN up.clean_solves > 0 OR a.verdict = 'AC' THEN pp.problem_id END)::int * 100)
             / NULLIF(COUNT(DISTINCT pp.problem_id), 0)::int
   END AS strength
 FROM patterns pat

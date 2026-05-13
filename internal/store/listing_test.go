@@ -145,7 +145,7 @@ func TestListPatternsWithStrengthUsesTotalProblemsAsDenominator(t *testing.T) {
 	sql := patternsWithStrengthSQL()
 	for _, want := range []string{
 		"COUNT(DISTINCT pp.problem_id) AS total_problems",
-		"COALESCE(COUNT(DISTINCT CASE WHEN up.clean_solves > 0 THEN up.problem_id END), 0) AS clean",
+		"COALESCE(COUNT(DISTINCT CASE WHEN up.clean_solves > 0 OR a.verdict = 'AC' THEN pp.problem_id END), 0) AS clean",
 		"/ NULLIF(COUNT(DISTINCT pp.problem_id), 0)::int",
 	} {
 		if !strings.Contains(sql, want) {
