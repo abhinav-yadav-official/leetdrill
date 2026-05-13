@@ -23,6 +23,10 @@ task dev
 
 Open http://localhost:8080.
 
+The dashboard counts show the full backlog. Today is a capped practice session
+and defaults to 5 problems, so it can be smaller than the total due or learning
+counts.
+
 ## Deploy
 
 `scripts/deploy_server.sh` bootstraps or updates an Ubuntu-style VPS. It syncs

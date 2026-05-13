@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -535,6 +536,7 @@ type sessionCardData struct {
 type sessionProblem struct {
 	ProblemID  int64
 	Slug       string
+	LeetcodeID string
 	Title      string
 	Difficulty models.Difficulty
 	URL        string
@@ -584,6 +586,7 @@ func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session
 		card.Problems = append(card.Problems, sessionProblem{
 			ProblemID:  p.ID,
 			Slug:       p.LeetcodeSlug,
+			LeetcodeID: p.LeetcodeFrontendID,
 			Title:      p.Title,
 			Difficulty: p.Difficulty,
 			URL:        p.URL,
@@ -594,8 +597,27 @@ func (s *server) sessionCard(ctx context.Context, uid int64, sess *store.Session
 		})
 	}
 
+	sortSessionProblems(card.Problems)
 	card.Done = card.TotalCount > 0 && card.CompletedCount == card.TotalCount
 	return card, nil
+}
+
+func sortSessionProblems(problems []sessionProblem) {
+	sort.SliceStable(problems, func(i, j int) bool {
+		left, leftOK := strconv.Atoi(problems[i].LeetcodeID)
+		right, rightOK := strconv.Atoi(problems[j].LeetcodeID)
+		switch {
+		case leftOK == nil && rightOK == nil:
+			if left != right {
+				return left < right
+			}
+		case leftOK == nil:
+			return true
+		case rightOK == nil:
+			return false
+		}
+		return problems[i].Title < problems[j].Title
+	})
 }
 
 func normalizeCompletionFilter(raw string) string {

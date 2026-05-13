@@ -166,6 +166,25 @@ func TestNormalizeCompletionFilter(t *testing.T) {
 	}
 }
 
+func TestSortSessionProblemsByLeetcodeNumber(t *testing.T) {
+	problems := []sessionProblem{
+		{Title: "Ten", LeetcodeID: "10"},
+		{Title: "Two", LeetcodeID: "2"},
+		{Title: "No ID"},
+		{Title: "One", LeetcodeID: "1"},
+	}
+
+	sortSessionProblems(problems)
+
+	got := []string{problems[0].Title, problems[1].Title, problems[2].Title, problems[3].Title}
+	want := []string{"One", "Two", "Ten", "No ID"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("sorted titles = %#v, want %#v", got, want)
+		}
+	}
+}
+
 func TestHandshakeRequestSupportsWebSessionToken(t *testing.T) {
 	body := `{"web_session_token":"web-token"}`
 	var req handshakeReq
