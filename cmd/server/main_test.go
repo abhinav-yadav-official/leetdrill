@@ -3,6 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -11,9 +14,12 @@ import (
 )
 
 func TestLoginPageUsesSplitIntroLayout(t *testing.T) {
-	body := fmt.Sprintf(loginPage, "invalid email or password.", "/leetdrill/login", "/leetdrill/extension/connect", "/leetdrill/forgot", "/leetdrill/signup")
+	body := fmt.Sprintf(loginPage, "invalid email or password.", "/leetdrill/auth/google/start?next=%2Fleetdrill%2Fextension%2Fconnect", "/leetdrill/login", "/leetdrill/extension/connect", "/leetdrill/forgot", "/leetdrill/signup")
 
 	for _, want := range []string{
+		`href="favicon.svg"`,
+		`aria-label="LeetDrill logo"`,
+		`>LD</text>`,
 		`<meta name="viewport" content="width=device-width, initial-scale=1">`,
 		`Daily practice flow for LeetCode.`,
 		`Track recent submissions, review timing, and difficult problems from one focused workspace.`,
@@ -21,11 +27,36 @@ func TestLoginPageUsesSplitIntroLayout(t *testing.T) {
 		`action="/leetdrill/login"`,
 		`name="next" value="/leetdrill/extension/connect"`,
 		`href="/leetdrill/signup"`,
+		`href="/leetdrill/auth/google/start?next=%2Fleetdrill%2Fextension%2Fconnect"`,
+		`Continue with Google`,
+		`leetdrill-theme`,
+		`.dark .bg-white`,
 		`type="email"`,
 		`type="password"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("login page missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestFaviconServesLDLogo(t *testing.T) {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/favicon.svg", nil)
+
+	handleFavicon(w, req)
+
+	if got := w.Result().Header.Get("Content-Type"); got != "image/svg+xml" {
+		t.Fatalf("Content-Type = %q, want image/svg+xml", got)
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		`<svg`,
+		`aria-label="LeetDrill logo"`,
+		`>LD</text>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("favicon missing %q:\n%s", want, body)
 		}
 	}
 }
@@ -52,13 +83,17 @@ func TestSafeLoginNext(t *testing.T) {
 }
 
 func TestSignupPageUsesSplitIntroLayout(t *testing.T) {
-	body := fmt.Sprintf(signupPage, "create an account.", "/leetdrill/signup", "/leetdrill/login")
+	body := fmt.Sprintf(signupPage, "create an account.", "/leetdrill/auth/google/start", "/leetdrill/signup", "/leetdrill/login")
 
 	for _, want := range []string{
 		`<meta name="viewport" content="width=device-width, initial-scale=1">`,
 		`Daily practice flow for LeetCode.`,
 		`Create account`,
 		`action="/leetdrill/signup"`,
+		`href="/leetdrill/auth/google/start"`,
+		`Continue with Google`,
+		`leetdrill-theme`,
+		`.dark .bg-white`,
 		`href="/leetdrill/login"`,
 		`name="email"`,
 		`name="password"`,
@@ -67,6 +102,49 @@ func TestSignupPageUsesSplitIntroLayout(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Fatalf("signup page missing %q:\n%s", want, body)
 		}
+	}
+}
+
+func TestGoogleOAuthStateRoundTrip(t *testing.T) {
+	state, cookieValue, err := newGoogleOAuthState("/leetdrill/problems?page=2")
+	if err != nil {
+		t.Fatalf("newGoogleOAuthState() error = %v", err)
+	}
+
+	next, ok := parseGoogleOAuthState(state, cookieValue)
+	if !ok {
+		t.Fatalf("parseGoogleOAuthState() ok = false")
+	}
+	if next != "/leetdrill/problems?page=2" {
+		t.Fatalf("next = %q", next)
+	}
+}
+
+func TestGoogleOAuthStateRejectsMismatch(t *testing.T) {
+	_, cookieValue, err := newGoogleOAuthState("/leetdrill/")
+	if err != nil {
+		t.Fatalf("newGoogleOAuthState() error = %v", err)
+	}
+
+	if _, ok := parseGoogleOAuthState("tampered", cookieValue); ok {
+		t.Fatalf("parseGoogleOAuthState() ok = true, want false")
+	}
+}
+
+func TestSetGoogleOAuthStateCookieUsesBasePath(t *testing.T) {
+	s := &server{basePath: "/leetdrill"}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/login", nil)
+
+	s.setGoogleOAuthStateCookie(w, req, "state-cookie")
+
+	cookies := w.Result().Cookies()
+	if len(cookies) != 1 {
+		t.Fatalf("cookies = %d, want 1", len(cookies))
+	}
+	c := cookies[0]
+	if c.Name != googleOAuthStateCookie || c.Path != "/leetdrill" || !c.HttpOnly || c.SameSite != http.SameSiteLaxMode {
+		t.Fatalf("cookie = %#v", c)
 	}
 }
 
@@ -186,6 +264,20 @@ func TestNormalizeCompletionFilter(t *testing.T) {
 		if got := normalizeCompletionFilter(tt.raw); got != tt.want {
 			t.Fatalf("normalizeCompletionFilter(%q) = %q, want %q", tt.raw, got, tt.want)
 		}
+	}
+}
+
+func TestNormalizeMistakeTagsKeepsKnownTagsInTaxonomyOrder(t *testing.T) {
+	got := normalizeMistakeTags([]string{
+		" complexity ",
+		"unknown",
+		"edge-case",
+		"complexity",
+		"off-by-one",
+	})
+	want := []string{"edge-case", "off-by-one", "complexity"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("normalizeMistakeTags() = %#v, want %#v", got, want)
 	}
 }
 
