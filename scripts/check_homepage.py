@@ -30,7 +30,7 @@ def main():
     require("Abhinav" in body, "homepage must mention Abhinav")
     require("Abhinav Yadav" not in body, "homepage must use Abhinav instead of Abhinav Yadav")
     require("SDE III" in body, "homepage must mention current role")
-    require("abhi.ay.in@gmail.com" in body, "homepage must link email")
+    require("me@abhiyadav.in" in body, "homepage must link email")
     require('href="/linkedin"' in body, "homepage must link LinkedIn via /linkedin")
     require('href="/github"' in body, "homepage must link GitHub profile via /github")
     require("https://github.com/abhinav-yadav-official/leetdrill" in body, "homepage must link GitHub repo")

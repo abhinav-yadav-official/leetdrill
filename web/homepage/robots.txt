@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /leetdrill/api/
+Disallow: /leetdrill/auth/
+
+Sitemap: https://abhiyadav.in/sitemap.xml
