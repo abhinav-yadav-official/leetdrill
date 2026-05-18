@@ -15,6 +15,11 @@ ADS = ROOT / "web" / "homepage" / "ads.txt"
 RESUME = ROOT / "web" / "homepage" / "Abhinav_Resume.pdf"
 DEPLOY = ROOT / "scripts" / "deploy_server.sh"
 REPORT_KEYWORDS = ["backend", "production", "celery", "mysql", "redis"]
+SEO_SEARCH_PHRASES = [
+    "abhinav yadav",
+    "instahyre",
+    "fullstack developer",
+]
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}")
 
 
@@ -105,10 +110,14 @@ def require_report_keyword_coverage(body):
     meta = parser.meta_description.lower()
     headings = " ".join(parser.headings).lower()
     require(150 <= len(parser.meta_description) <= 220, "meta description must be 150-220 chars")
+    for phrase in ["abhinav yadav", "instahyre", "fullstack", "backend"]:
+        require(phrase in title, f"title must include primary SEO phrase: {phrase}")
     for keyword in REPORT_KEYWORDS:
-        require(keyword in title, f"title must include SEO keyword: {keyword}")
         require(keyword in meta, f"meta description must include SEO keyword: {keyword}")
         require(keyword in headings, f"heading tags must include SEO keyword: {keyword}")
+    combined = " ".join([title, meta, headings])
+    for phrase in SEO_SEARCH_PHRASES:
+        require(phrase in combined, f"homepage SEO tags must include search phrase: {phrase}")
 
 
 def require_no_plaintext_email(body):
@@ -153,7 +162,7 @@ def main():
     require(RESUME.stat().st_size > 0, "homepage resume PDF must not be empty")
     require('href="/resume"' in body, "homepage must link resume via /resume")
     require("Abhinav" in body, "homepage must mention Abhinav")
-    require("Abhinav Yadav" not in body, "homepage must use Abhinav instead of Abhinav Yadav")
+    require("Abhinav Yadav" in body, "homepage must include full name for search")
     require("SDE III" in body, "homepage must mention current role")
     require('data-email-local="me"' in body, "homepage must obfuscate contact email local part")
     require('data-email-domain="abhiyadav.in"' in body, "homepage must obfuscate contact email domain")
@@ -174,9 +183,9 @@ def main():
     require("typing-cursor" in body, "homepage must include typing cursor")
     require("typeHeroLine" in body, "homepage must include hero typing script")
     require("prefers-reduced-motion: reduce" in body, "homepage typing must respect reduced motion")
-    require("Backend production engineering" in body, "homepage must include backend production section")
+    require("Instahyre backend and fullstack work" in body, "homepage must include Instahyre fullstack section")
     require("Education" in body, "homepage must include Education section")
-    require("Senior backend engineer" in body, "homepage must include backend about summary")
+    require("senior backend engineer" in body.lower(), "homepage must include backend about summary")
     require("backdrop-filter: blur(4.5px)" in body, "homepage desktop navbar must use lighter blur")
     require("-webkit-backdrop-filter: blur(4.5px)" in body, "homepage desktop navbar must use lighter safari blur")
     require("linear-gradient(to bottom" in body, "homepage navbar background must fade out at bottom")
