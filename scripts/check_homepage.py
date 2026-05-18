@@ -257,6 +257,9 @@ def main():
     require("error_page 404 /404.html;" in deploy, "nginx deploy must use custom 404 page")
     require("error_page 500 502 503 504 /50x.html;" in deploy, "nginx deploy must use custom 50x page")
     require("proxy_intercept_errors on;" in deploy, "nginx deploy must intercept upstream error pages")
+    require("open_file_cache max=1000 inactive=60s;" in deploy, "nginx deploy must enable open file cache")
+    require("gzip_static on;" in deploy, "nginx deploy must enable static gzip")
+    require("stale-while-revalidate=86400" in deploy, "homepage deploy must cache homepage briefly")
     for url in [
         "http://abhiy.xyz/",
         "https://abhiy.xyz/",

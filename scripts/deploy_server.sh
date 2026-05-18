@@ -218,6 +218,21 @@ if [ "$SETUP_NGINX" = true ]; then
     exit 1
   fi
 
+  sudo tee /etc/nginx/conf.d/static-perf.conf >/dev/null <<'NGINX_PERF'
+# Static-site latency tuning for abhiyadav.in.
+keepalive_timeout 65;
+keepalive_requests 1000;
+tcp_nodelay on;
+
+open_file_cache max=1000 inactive=60s;
+open_file_cache_valid 120s;
+open_file_cache_min_uses 2;
+open_file_cache_errors on;
+
+gzip_static on;
+gzip_min_length 1024;
+NGINX_PERF
+
   if sudo grep -Rqs "location $BASE_PATH/" /etc/nginx/sites-available /etc/nginx/sites-enabled; then
     echo "nginx already has $BASE_PATH location; leaving existing site config in place"
   else
@@ -252,6 +267,16 @@ server {
 
     location = /50x.html {
         internal;
+    }
+
+    location = / {
+        add_header Cache-Control "public, max-age=300, stale-while-revalidate=86400" always;
+        try_files /index.html =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "public, max-age=300, stale-while-revalidate=86400" always;
+        try_files /index.html =404;
     }
 
     location = $BASE_PATH {
@@ -314,7 +339,7 @@ if [ -d "$ROOT/web/homepage" ]; then
   tmp_home="/tmp/leetdrill-homepage"
   ssh "$HOST" "rm -rf $(quote "$tmp_home") && mkdir -p $(quote "$tmp_home")"
   rsync -az --delete "$ROOT/web/homepage"/ "$HOST:$tmp_home"/
-  ssh "$HOST" "sudo rsync -a --delete --exclude=shared/ $(quote "$tmp_home")/ /var/www/html/ && rm -rf $(quote "$tmp_home")"
+  ssh "$HOST" "sudo rsync -a --delete --exclude=shared/ $(quote "$tmp_home")/ /var/www/html/ && sudo find /var/www/html -maxdepth 1 -type f \\( -name '*.html' -o -name '*.txt' -o -name '*.xml' -o -name '*.svg' \\) -exec gzip -9 -kf {} \\; && rm -rf $(quote "$tmp_home")"
 fi
 
 scheme="https"
