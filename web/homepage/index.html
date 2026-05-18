@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Abhinav &middot; SDE III at Instahyre &middot; Backend Engineer</title>
+    <title>Abhinav, SDE III at Instahyre, Backend Engineer</title>
     <meta
       name="description"
-      content="Abhinav &mdash; SDE III at Instahyre. Senior backend engineer working on distributed systems, search and ranking, Redis caching, async pipelines, MySQL/InnoDB performance, and AWS infrastructure. Portfolio, resume, projects, and LeetDrill."
+      content="SDE III at Instahyre. Senior backend engineer. Distributed systems, search, Redis caching, async pipelines, MySQL, AWS. Portfolio, resume, LeetDrill."
     >
     <meta name="author" content="Abhinav">
     <meta name="robots" content="index,follow,max-image-preview:large">
@@ -19,8 +19,8 @@
     <link rel="alternate" type="application/pdf" href="/resume" title="Abhinav resume (PDF)">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Abhinav">
-    <meta property="og:title" content="Abhinav &middot; SDE III at Instahyre">
-    <meta property="og:description" content="Senior backend engineer. Distributed systems, search and ranking, Redis caching, async pipelines, MySQL performance, AWS. Portfolio, resume, and projects.">
+    <meta property="og:title" content="Abhinav, SDE III at Instahyre">
+    <meta property="og:description" content="SDE III at Instahyre. Senior backend engineer. Distributed systems, search, caching, async, MySQL, AWS.">
     <meta property="og:url" content="https://abhiyadav.in/">
     <meta property="og:image" content="https://abhiyadav.in/og-image.png">
     <meta property="og:image:width" content="1200">
@@ -28,7 +28,7 @@
     <meta property="og:image:alt" content="Abhinav, SDE III at Instahyre">
     <meta property="og:locale" content="en_US">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Abhinav &middot; SDE III at Instahyre">
+    <meta name="twitter:title" content="Abhinav, SDE III at Instahyre">
     <meta name="twitter:description" content="Senior backend engineer. Distributed systems, search, caching, async, MySQL, AWS. Portfolio and projects.">
     <meta name="twitter:image" content="https://abhiyadav.in/og-image.png">
     <meta name="twitter:image:alt" content="Abhinav, SDE III at Instahyre">
@@ -271,6 +271,22 @@
         transform: translateY(-1px);
       }
 
+      .share {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .share a {
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .share a:hover {
+        color: var(--accent);
+      }
+
       .section {
         padding: 84px 24px;
       }
@@ -375,13 +391,17 @@
 
       .project-card h3,
       .archive-card h3,
+      .archive-card .card-title,
       .system-card h3,
+      .system-card .card-title,
       .experience-card h3,
       .education-card h3 {
+        display: block;
         margin: 8px 0 0;
         color: var(--ink);
         font-size: 28px;
         line-height: 1.22;
+        font-weight: 700;
       }
 
       .project-card p,
@@ -429,10 +449,30 @@
       .archive-card,
       .system-card {
         padding: 24px;
+        position: relative;
+      }
+
+      .archive-card-link,
+      .project-card-link {
+        color: inherit;
+      }
+
+      .archive-card-link::after,
+      .project-card-link::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+      }
+
+      .project-card {
+        position: relative;
       }
 
       .archive-card h3,
-      .system-card h3 {
+      .archive-card .card-title,
+      .system-card h3,
+      .system-card .card-title {
         font-size: 21px;
       }
 
@@ -708,7 +748,7 @@
           <div class="hero-inner">
             <div class="hero-copy">
               <p class="hello typing-line typing-cursor" data-text="Hello!">Hello!</p>
-              <h1 id="intro-title" class="typing-line" data-text="I'm Abhinav">I'm <span>Abhinav</span></h1>
+              <h1 id="intro-title" class="typing-line" data-text="I am Abhinav, a backend engineer.">I am <span>Abhinav</span>, a backend engineer.</h1>
               <p class="title">
                 <span
                   class="typing-line"
@@ -736,7 +776,7 @@
               <p class="lead">
                 Senior backend engineer focused on correctness, performance, and production safety.
                 Owns technical direction across high-traffic backend domains handling 50M+ monthly
-                API requests &mdash; opportunity scoring, candidate ranking, recruiter workflows,
+                API requests, opportunity scoring, candidate ranking, recruiter workflows,
                 notification pipelines, and background job orchestration. Designated P0/P1 on-call
                 escalation owner and primary reviewer for performance-sensitive,
                 security-critical, and data-integrity-impacting backend changes.
@@ -776,13 +816,13 @@
               <div class="heading-rule"></div>
             </div>
             <div class="content-stack">
-              <a class="project-card" href="https://abhiyadav.in/leetdrill">
+              <article class="project-card">
                 <div class="card-top">
                   <div>
                     <span class="index">01</span>
-                    <h3>LeetDrill</h3>
+                    <h3><a class="project-card-link" href="https://abhiyadav.in/leetdrill">LeetDrill</a></h3>
                   </div>
-                  <span class="arrow" aria-hidden="true">↗</span>
+                  <span class="arrow" aria-hidden="true">&gt;</span>
                 </div>
                 <p>
                   Self-hosted LeetCode practice tracker with catalog import, browser-extension
@@ -793,7 +833,7 @@
                   <span class="repo-skill">Postgres</span>
                   <span class="repo-skill">Browser Extension</span>
                 </div>
-              </a>
+              </article>
               <a class="card-link" href="https://github.com/abhinav-yadav-official/leetdrill">View LeetDrill source</a>
             </div>
           </div>
@@ -807,19 +847,19 @@
             </div>
             <div class="systems-grid">
               <article class="system-card">
-                <h3>Ranking and search</h3>
+                <span class="card-title">Ranking and search</span>
                 <p>Opportunity calculation, Elasticsearch/OpenSearch alignment, and consistency checks.</p>
               </article>
               <article class="system-card">
-                <h3>Async workflows</h3>
+                <span class="card-title">Async workflows</span>
                 <p>Celery and RabbitMQ pipelines, retry behavior, queue isolation, and long-running tasks.</p>
               </article>
               <article class="system-card">
-                <h3>Caching</h3>
+                <span class="card-title">Caching</span>
                 <p>Redis hot paths, TTL design, invalidation boundaries, and connection reuse.</p>
               </article>
               <article class="system-card">
-                <h3>Migrations</h3>
+                <span class="card-title">Migrations</span>
                 <p>Schema changes, index rebuilds, backfills, feature flags, and zero-downtime cutovers.</p>
               </article>
             </div>
@@ -833,50 +873,50 @@
               <div class="heading-rule"></div>
             </div>
             <div class="archive-grid">
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/manager.ai">
-                <h3>manager.ai</h3>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/manager.ai">manager.ai</a>
                 <p>Generates quarterly developer evaluations from Phabricator data.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/legacy-mac-wheels">
-                <h3>legacy-mac-wheels</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/legacy-mac-wheels">legacy-mac-wheels</a>
                 <p>Static package index for Python wheels on older macOS development machines.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/homebrew-legacy">
-                <h3>homebrew-legacy</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/homebrew-legacy">homebrew-legacy</a>
                 <p>Homebrew tap for bootstrapping and maintaining legacy environments.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/dotfiles">
-                <h3>dotfiles</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/dotfiles">dotfiles</a>
                 <p>Shell-based local setup and development environment configuration.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/register-page">
-                <h3>register-page</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/register-page">register-page</a>
                 <p>PHP and MySQL login/register pages, an older public repo with auth basics.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/object-detect">
-                <h3>object-detect</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/object-detect">object-detect</a>
                 <p>JavaScript object-detection experiment.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/doc-scan">
-                <h3>doc-scan</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/doc-scan">doc-scan</a>
                 <p>React and Express app that converts images to text using Tesseract.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/mern-user-authentication">
-                <h3>mern-user-authentication</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/mern-user-authentication">mern-user-authentication</a>
                 <p>User authentication single-page app using the MERN stack.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/angular-freehand-drawing-app">
-                <h3>angular-freehand-drawing-app</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/angular-freehand-drawing-app">angular-freehand-drawing-app</a>
                 <p>Angular drawing app for freehand canvas input.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/keras-flask-app">
-                <h3>keras-flask-app</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/keras-flask-app">keras-flask-app</a>
                 <p>Flask app that classifies digits drawn on a web canvas using a Keras model.</p>
-              </a>
-              <a class="archive-card" href="https://github.com/abhinav-yadav-official/react-clock-app">
-                <h3>react-clock-app</h3>
+              </article>
+              <article class="archive-card">
+                <a class="archive-card-link" href="https://github.com/abhinav-yadav-official/react-clock-app">react-clock-app</a>
                 <p>Small analog clock interface built with React.</p>
-              </a>
+              </article>
             </div>
           </div>
         </section>
@@ -896,11 +936,11 @@
                 <h3>SDE III</h3>
                 <ul>
                   <li>Own technical direction across 5+ high-traffic backend domains handling 50M+ monthly API requests: opportunity scoring, candidate ranking, recruiter workflows, notification pipelines, and background job orchestration.</li>
-                  <li>Drove a system-wide latency reduction initiative via query refactoring, multi-layer caching, and targeted N+1 elimination &mdash; 30-45% p95 improvement across high-traffic production endpoints.</li>
+                  <li>Drove a system-wide latency reduction initiative via query refactoring, multi-layer caching, and targeted N+1 elimination, 30-45% p95 improvement across high-traffic production endpoints.</li>
                   <li>Architected a zero-downtime Elasticsearch index versioning and live schema migration strategy across a 10M+ document corpus using alias hot-swap, parallel reindex, and automated rollback.</li>
                   <li>Led AWS OpenSearch cluster migration: full alias lifecycle, cross-version query compatibility, blue-green reindex pipelines, custom shard routing, and CloudWatch alerting.</li>
-                  <li>Established org-wide engineering standards for sync/async execution boundaries, cache invalidation contracts, and data ownership &mdash; formally adopted as backend guidelines across the org.</li>
-                  <li>Designated P0/P1 on-call escalation owner; resolved systemic failures across Celery, RabbitMQ, Elasticsearch, and MySQL &mdash; ~40% reduction in production incident frequency over 18 months.</li>
+                  <li>Established org-wide engineering standards for sync/async execution boundaries, cache invalidation contracts, and data ownership, formally adopted as backend guidelines across the org.</li>
+                  <li>Designated P0/P1 on-call escalation owner; resolved systemic failures across Celery, RabbitMQ, Elasticsearch, and MySQL, ~40% reduction in production incident frequency over 18 months.</li>
                   <li>Primary review authority for performance-sensitive, security-critical, and data-integrity-impacting backend changes.</li>
                   <li>Mentored 10+ engineers on production debugging, race condition analysis, migration design, and async system patterns; multiple mentees advanced to senior roles.</li>
                 </ul>
@@ -913,8 +953,8 @@
                 <h3>Senior Software Engineer (SDE II)</h3>
                 <ul>
                   <li>Optimized high-traffic systems across Search, Candidates, Jobs, and Opportunities supporting 10K+ DAU at peak concurrent load with sub-200ms p95 targets.</li>
-                  <li>Benchmarked Redis, ElastiCache, and Memcached under production-equivalent load; migrated DatabaseCache &rarr; Redis with zero downtime, cutting steady-state DB query load ~35%.</li>
-                  <li>Designed Redis caching with per-key TTLs, safe invalidation, and connection pooling &mdash; 25-40% p95 latency improvement on the hottest API paths.</li>
+                  <li>Benchmarked Redis, ElastiCache, and Memcached under production-equivalent load; migrated DatabaseCache to Redis with zero downtime, cutting steady-state DB query load ~35%.</li>
+                  <li>Designed Redis caching with per-key TTLs, safe invalidation, and connection pooling, 25-40% p95 latency improvement on the hottest API paths.</li>
                   <li>Designed and deployed a horizontally scalable multi-server topology cleanly separating uWSGI/NGINX web tier, dedicated Celery worker pools, and outbound processing.</li>
                   <li>Resolved systemic Celery reliability failures: retry storms, queue misconfigurations, and long-running tasks exceeding SLA budgets.</li>
                   <li>Debugged production incidents involving RDS replica lag, InnoDB deadlocks, CPU saturation, and MySQL lock contention on multi-million-row tables.</li>
@@ -928,7 +968,7 @@
                 </div>
                 <h3>Software Engineer (SDE I)</h3>
                 <ul>
-                  <li>Shipped Employer Team Management with Admin/Member RBAC, audit trail, and impersonation safeguards &mdash; adopted by 1,000+ employer companies.</li>
+                  <li>Shipped Employer Team Management with Admin/Member RBAC, audit trail, and impersonation safeguards, adopted by 1,000+ employer companies.</li>
                   <li>Identified and patched authorization bypass vulnerabilities across backend API and frontend UI exposing premium features to unauthorized users.</li>
                   <li>Resolved race conditions and non-atomic state transitions across Django ORM and Celery async workflows, eliminating a class of silent data corruption bugs.</li>
                   <li>Instrumented Datadog APM and Sentry across API and async tiers, cutting MTTD on production incidents ~50%.</li>
@@ -962,8 +1002,17 @@
       </main>
 
       <footer class="footer">
-        <span>Abhinav · Backend engineer</span>
+        <span>Abhinav, Backend engineer</span>
         <a href="mailto:me@abhiyadav.in">me@abhiyadav.in</a>
+        <nav class="share" aria-label="Share this page">
+          <span>Share:</span>
+          <a href="https://twitter.com/intent/tweet?text=Abhinav%2C%20SDE%20III%20at%20Instahyre&amp;url=https%3A%2F%2Fabhiyadav.in%2F" target="_blank" rel="noopener noreferrer">X</a>
+          <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabhiyadav.in%2F" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fabhiyadav.in%2F" target="_blank" rel="noopener noreferrer">Facebook</a>
+          <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fabhiyadav.in%2F&amp;title=Abhinav%2C%20SDE%20III%20at%20Instahyre" target="_blank" rel="noopener noreferrer">Reddit</a>
+          <a href="https://api.whatsapp.com/send?text=Abhinav%2C%20SDE%20III%20at%20Instahyre%20https%3A%2F%2Fabhiyadav.in%2F" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          <a href="mailto:?subject=Abhinav%2C%20SDE%20III%20at%20Instahyre&amp;body=https%3A%2F%2Fabhiyadav.in%2F">Email</a>
+        </nav>
       </footer>
     </div>
     <script>
@@ -999,7 +1048,7 @@
             }
             window.setTimeout(() => {
               if (line.id === "intro-title") {
-                line.innerHTML = "I'm <span>Abhinav</span>";
+                line.innerHTML = "I am <span>Abhinav</span>, a backend engineer.";
               }
               line.classList.remove("typing-cursor");
               resolve();
