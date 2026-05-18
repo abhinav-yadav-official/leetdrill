@@ -6,6 +6,8 @@ keeps a daily practice queue based on what is due, unsolved, or needs more work.
 
 Production: https://abhiyadav.in/leetdrill
 
+Author: https://abhiyadav.in
+
 ## Development
 
 Prereqs: Go 1.22+, Docker, and [Task](https://taskfile.dev).
