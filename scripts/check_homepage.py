@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+from collections import defaultdict
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,9 +24,66 @@ def require_after(body, needle, anchor, message):
     require(needle_index > anchor_index, message)
 
 
+class AnchorParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self._anchor_stack = []
+        self.anchors = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            self._anchor_stack.append({"href": dict(attrs).get("href", ""), "text": []})
+
+    def handle_data(self, data):
+        if self._anchor_stack:
+            self._anchor_stack[-1]["text"].append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "a" and self._anchor_stack:
+            anchor = self._anchor_stack.pop()
+            text = " ".join(" ".join(anchor["text"]).split())
+            self.anchors.append((anchor["href"], text))
+
+
+def require_unique_anchor_text(body):
+    parser = AnchorParser()
+    parser.feed(body)
+    by_text = defaultdict(list)
+    for href, text in parser.anchors:
+        if text:
+            by_text[text].append(href)
+    duplicates = {
+        text: hrefs
+        for text, hrefs in by_text.items()
+        if len(hrefs) > 1
+    }
+    require(not duplicates, f"homepage anchor text must be unique: {duplicates}")
+
+
+class NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def require_redirect(url, location):
+    opener = build_opener(NoRedirectHandler)
+    request = Request(url, method="HEAD")
+    try:
+        opener.open(request, timeout=10)
+    except Exception as exc:
+        response = getattr(exc, "headers", {})
+        code = getattr(exc, "code", None)
+        actual_location = response.get("Location")
+        require(code in (301, 308), f"{url} must return permanent redirect, got {code}")
+        require(actual_location == location, f"{url} must redirect to {location}, got {actual_location}")
+        return
+    raise SystemExit(f"{url} must redirect to {location}")
+
+
 def main():
     body = PAGE.read_text()
     deploy = DEPLOY.read_text()
+    require_unique_anchor_text(body)
     require(RESUME.exists(), "homepage resume PDF must exist")
     require(RESUME.stat().st_size > 0, "homepage resume PDF must not be empty")
     require('href="/resume"' in body, "homepage must link resume via /resume")
@@ -33,6 +93,10 @@ def main():
     require("me@abhiyadav.in" in body, "homepage must link email")
     require('href="/linkedin"' in body, "homepage must link LinkedIn via /linkedin")
     require('href="/github"' in body, "homepage must link GitHub profile via /github")
+    require(
+        "https://leetcode.com/u/abhinav-yadav-official/" in body,
+        "homepage must link LeetCode profile",
+    )
     require("https://github.com/abhinav-yadav-official/leetdrill" in body, "homepage must link GitHub repo")
     require("https://abhiyadav.in/leetdrill" in body, "homepage must link hosted LeetDrill")
     require("LeetDrill" in body, "homepage must mention LeetDrill")
@@ -107,6 +171,13 @@ def main():
         "--exclude=shared/" in deploy,
         "homepage deploy must preserve /var/www/html/shared extension downloads",
     )
+    for url in [
+        "http://abhiy.xyz/",
+        "https://abhiy.xyz/",
+        "http://www.abhiy.xyz/",
+        "https://www.abhiy.xyz/",
+    ]:
+        require_redirect(url, "https://abhiyadav.in/")
 
 
 if __name__ == "__main__":
