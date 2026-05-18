@@ -1,6 +1,6 @@
 # LeetDrill Companion Privacy
 
-LeetDrill Companion sends data only to https://abhiy.xyz/leetdrill.
+LeetDrill Companion sends data only to https://abhiyadav.in/leetdrill.
 
 The extension collects:
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HOST="${1:-abhiy.xyz}"
+HOST="${1:-abhiyadav.in}"
 REMOTE_DIR="${2:-/var/www/html/shared/leetdrill-extension}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST="$ROOT/dist/extension-share"

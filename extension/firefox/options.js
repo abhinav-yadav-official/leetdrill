@@ -12,7 +12,7 @@ function send(type, payload) {
 async function load() {
   const res = await send("LEETDRILL_GET_CONFIG");
   if (res.ok) {
-    $("backend").value = res.data.backendUrl || "https://abhiy.xyz/leetdrill";
+    $("backend").value = res.data.backendUrl || "https://abhiyadav.in/leetdrill";
   }
 }
 

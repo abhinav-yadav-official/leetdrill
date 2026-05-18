@@ -3,7 +3,7 @@
 ## Summary
 
 LeetDrill Companion connects LeetCode activity to the practice tracker at
-https://abhiy.xyz/leetdrill.
+https://abhiyadav.in/leetdrill.
 
 ## Purpose
 
@@ -14,7 +14,7 @@ and lets LeetDrill import solved-history data for daily practice planning.
 
 ## Description
 
-LeetDrill Companion is for users of https://abhiy.xyz/leetdrill. After the user
+LeetDrill Companion is for users of https://abhiyadav.in/leetdrill. After the user
 signs in to LeetDrill in the browser, the extension can connect using that
 existing login and stores a local extension token.
 
@@ -37,7 +37,7 @@ LeetCode problem pages, sell data, or send data to third parties.
   repeated manual setup.
 - `https://leetcode.com/*`: runs on LeetCode problem pages and reads LeetCode
   cookies needed for authenticated history import.
-- `https://abhiy.xyz/*`: connects only to the LeetDrill backend and reads the
+- `https://abhiyadav.in/*`: connects only to the LeetDrill backend and reads the
   LeetDrill login cookie for existing-login connection.
 
 ## Data Use
@@ -59,5 +59,5 @@ Data is used only to maintain the user's LeetDrill practice tracker.
   accessible resource so it can observe page-context `fetch` responses on
   LeetCode problem pages.
 - Host permissions are limited to LeetCode and the production LeetDrill backend.
-- The extension can be tested by signing in at https://abhiy.xyz/leetdrill,
+- The extension can be tested by signing in at https://abhiyadav.in/leetdrill,
   installing the package, opening the popup, and visiting a LeetCode problem page.

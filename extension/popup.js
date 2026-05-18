@@ -48,7 +48,7 @@ async function saveLoginToken() {
 async function showConnectPanel(cfg) {
   $("connectPanel").style.display = "block";
   $("todayPanel").style.display = "none";
-  $("backend").value = (cfg && cfg.backendUrl) || "https://abhiy.xyz/leetdrill";
+  $("backend").value = (cfg && cfg.backendUrl) || "https://abhiyadav.in/leetdrill";
   setStatus("connect with a LeetDrill code", "bad");
 }
 

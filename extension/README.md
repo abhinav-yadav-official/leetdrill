@@ -1,6 +1,6 @@
 # LeetDrill Companion (extension)
 
-Chrome MV3 and Firefox WebExtension companion for https://abhiy.xyz/leetdrill.
+Chrome MV3 and Firefox WebExtension companion for https://abhiyadav.in/leetdrill.
 Main flows:
 
 1. Captures submission verdicts from leetcode.com via a `window.fetch` hook on
@@ -14,7 +14,7 @@ Main flows:
 
 1. Visit `chrome://extensions/`, enable Developer mode.
 2. Click "Load unpacked", point at this directory.
-3. Sign in at `https://abhiy.xyz/leetdrill`, then open the popup or options page.
+3. Sign in at `https://abhiyadav.in/leetdrill`, then open the popup or options page.
    The extension will use the existing browser login.
 4. Open a LeetCode problem and submit. Console should log
    `[leetdrill] submission applied`.
@@ -26,7 +26,7 @@ Main flows:
 1. Visit `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on...**.
 3. Select `extension/firefox/manifest.json`.
-4. Sign in at `https://abhiy.xyz/leetdrill`, then open the popup or options page.
+4. Sign in at `https://abhiyadav.in/leetdrill`, then open the popup or options page.
    The extension will use the existing browser login.
 5. Open a LeetCode problem and submit. Console should log
    `[leetdrill] submission applied`.
@@ -45,7 +45,7 @@ To publish them to the VPS share page:
 task extension:deploy
 ```
 
-The public page is `https://abhiy.xyz/shared/leetdrill-extension/`.
+The public page is `https://abhiyadav.in/shared/leetdrill-extension/`.
 Submit the Chrome zip to the Chrome Web Store and the Firefox XPI/source zip to
 addons.mozilla.org for signing. Store listing and permission text lives in
 `STORE_LISTING.md`; privacy text lives in `PRIVACY.md`.

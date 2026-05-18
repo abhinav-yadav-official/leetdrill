@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EXT = ROOT / "extension"
 DIST = ROOT / "dist" / "extension-share"
-SHARE_URL = "https://abhiy.xyz/shared/leetdrill-extension/"
+SHARE_URL = "https://abhiyadav.in/shared/leetdrill-extension/"
 
 SHARED_FILES = [
     "background.js",
@@ -137,7 +137,7 @@ def render_index(chrome_zip, firefox_zip, firefox_xpi, version):
   <main>
     <h1>LeetDrill Extension</h1>
     <p>Version {html.escape(version)} packages for the LeetDrill companion extension.</p>
-    <p>LeetDrill is a practice tracker at <a href="https://abhiy.xyz/leetdrill">abhiy.xyz/leetdrill</a>.
+    <p>LeetDrill is a practice tracker at <a href="https://abhiyadav.in/leetdrill">abhiyadav.in/leetdrill</a>.
       This extension captures LeetCode submission results, syncs LeetCode cookies
       only to the LeetDrill backend, and lets the backend import your solved
       history for daily practice planning.</p>
@@ -164,7 +164,7 @@ def render_index(chrome_zip, firefox_zip, firefox_xpi, version):
       <li>Attach <code>{html.escape(firefox_zip.name)}</code> as source if requested during review.</li>
     </ol>
 
-    <p>After install, sign in at <code>https://abhiy.xyz/leetdrill</code>. The extension
+    <p>After install, sign in at <code>https://abhiyadav.in/leetdrill</code>. The extension
       can connect using that existing browser login.</p>
   </main>
 </body>

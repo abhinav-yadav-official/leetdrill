@@ -138,7 +138,7 @@ func TestRendererPageIncludesExtensionLink(t *testing.T) {
 
 	body := rec.Body.String()
 	for _, want := range []string{
-		`href="https://abhiy.xyz/shared/leetdrill-extension/"`,
+		`href="https://abhiyadav.in/shared/leetdrill-extension/"`,
 		`target="_blank"`,
 		`Extension`,
 	} {
@@ -169,8 +169,8 @@ func TestSettingsPageIncludesExtensionPanel(t *testing.T) {
 	body := rec.Body.String()
 	for _, want := range []string{
 		`Browser extension`,
-		`href="https://abhiy.xyz/shared/leetdrill-extension/"`,
-		`https://abhiy.xyz/leetdrill`,
+		`href="https://abhiyadav.in/shared/leetdrill-extension/"`,
+		`https://abhiyadav.in/leetdrill`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("rendered settings missing extension panel %q:\n%s", want, body)

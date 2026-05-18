@@ -3,65 +3,932 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Abhiy Projects</title>
+    <title>Abhinav - SDE III at Instahyre</title>
+    <meta
+      name="description"
+      content="Portfolio of Abhinav, a senior backend engineer focused on reliable systems, async workflows, search, caching, and developer tools."
+    >
     <style>
       :root {
-        color-scheme: light;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: #172033;
-        background: #f7f8fb;
+        color-scheme: dark;
+        font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        color: #f8fafc;
+        background: #020617;
+        --accent: #60a5fa;
+        --accent-strong: #3b82f6;
+        --accent-soft: rgba(96, 165, 250, 0.14);
+        --accent-wash: rgba(96, 165, 250, 0.24);
+        --ink: #f8fafc;
+        --muted: #cbd5e1;
+        --soft-muted: #94a3b8;
+        --subtle: #111827;
+        --line: rgba(148, 163, 184, 0.3);
+        --card: #0f172a;
+        scroll-behavior: smooth;
+        scroll-padding-top: 86px;
       }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
+        background: #020617;
+        overflow-x: hidden;
       }
-      main {
-        max-width: 760px;
+
+      a {
+        color: inherit;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+      }
+
+      .devportfolio-inspired {
+        min-height: 100vh;
+      }
+
+      .site-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 20;
+        display: flex;
+        justify-content: center;
+        padding: 18px 24px 28px;
+        background: linear-gradient(to bottom, rgba(2, 6, 23, 0.76) 0%, rgba(2, 6, 23, 0.56) 58%, rgba(2, 6, 23, 0) 100%);
+        backdrop-filter: blur(4.5px);
+        -webkit-backdrop-filter: blur(4.5px);
+        transition: background 220ms ease, border-color 220ms ease;
+      }
+
+      .site-nav ul {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 28px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .site-nav a {
+        color: var(--muted);
+        font-size: 15px;
+        font-weight: 600;
+        transition: color 180ms ease;
+      }
+
+      .site-nav a:hover {
+        color: var(--accent);
+      }
+
+      .hero {
+        position: relative;
+        isolation: isolate;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        background: #020617;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -3;
+        background:
+          radial-gradient(ellipse 900px 1200px at 0% 0%, var(--accent-wash) 0%, var(--accent-soft) 34%, rgba(15, 23, 42, 0.68) 72%, #020617 100%);
+      }
+
+      .hero-pattern {
+        position: absolute;
+        inset: 0;
+        z-index: -2;
+        width: 100%;
+        height: 100%;
+        stroke: rgba(148, 163, 184, 0.24);
+        opacity: 0.86;
+        mask-image: radial-gradient(100% 100% at top right, #ffffff, transparent);
+        pointer-events: none;
+      }
+
+      .programming-symbols {
+        fill: var(--accent);
+        opacity: 0.18;
+      }
+
+      .hero-inner {
+        width: min(1220px, calc(100% - 48px));
         margin: 0 auto;
-        padding: 56px 20px;
+        padding: 96px 0 110px;
       }
+
+      .hero-copy {
+        max-width: 920px;
+      }
+
+      .hello {
+        margin: 0;
+        color: var(--muted);
+        font-size: clamp(24px, 4vw, 56px);
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
       h1 {
-        margin: 0 0 12px;
-        font-size: 36px;
-        line-height: 1.12;
+        margin: 34px 0 0;
+        color: var(--ink);
+        font-size: clamp(44px, 9vw, 104px);
+        line-height: 1.02;
+        font-weight: 800;
+        letter-spacing: 0;
       }
-      p {
-        color: #4b5565;
+
+      h1 span {
+        color: var(--accent);
+      }
+
+      .title {
+        max-width: 760px;
+        margin: 30px 0 0;
+        color: var(--muted);
+        font-size: clamp(18px, 2vw, 25px);
+        line-height: 1.65;
+        font-weight: 600;
+      }
+
+      .typing-line {
+        display: block;
+      }
+
+      .typing-cursor::after {
+        content: "";
+        display: inline-block;
+        width: 0.56em;
+        height: 0.12em;
+        margin-left: 0.12em;
+        vertical-align: baseline;
+        background: currentColor;
+        animation: cursorBlink 850ms steps(2, start) infinite;
+      }
+
+      .hero-actions {
+        position: absolute;
+        left: max(24px, calc((100vw - 1220px) / 2));
+        right: max(24px, calc((100vw - 1220px) / 2));
+        bottom: 42px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        color: #e2e8f0;
+        animation: fadeIn 820ms ease 450ms both;
+      }
+
+      .hero-actions a,
+      .card-link,
+      .footer a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        transition: color 180ms ease, transform 180ms ease;
+      }
+
+      .hero-actions a:hover,
+      .card-link:hover,
+      .footer a:hover {
+        color: var(--accent);
+        transform: translateY(-1px);
+      }
+
+      .section {
+        padding: 84px 24px;
+      }
+
+      .section-grid {
+        width: min(1220px, 100%);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: minmax(240px, 0.38fr) minmax(0, 0.62fr);
+        gap: 72px;
+        align-items: start;
+      }
+
+      .section-heading h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: clamp(38px, 6vw, 84px);
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .heading-rule {
+        width: 75px;
+        height: 5px;
+        margin-top: 16px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      .content-stack {
+        display: grid;
+        gap: 28px;
+      }
+
+      .lead {
+        margin: 0;
+        color: var(--muted);
+        font-size: clamp(19px, 2vw, 28px);
+        line-height: 1.62;
+        font-weight: 500;
+      }
+
+      .skills,
+      .repo-skills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .skill,
+      .repo-skill {
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.16);
+        color: #e2e8f0;
+        padding: 8px 13px;
+        font-size: 15px;
+        font-weight: 700;
+        transition: background 180ms ease;
+      }
+
+      .skill:hover {
+        background: rgba(148, 163, 184, 0.25);
+      }
+
+      .project-card,
+      .archive-card,
+      .system-card,
+      .experience-card,
+      .education-card {
+        display: block;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--subtle);
+        padding: 30px;
+        transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease, background 220ms ease;
+      }
+
+      .project-card:hover,
+      .archive-card:hover,
+      .system-card:hover,
+      .experience-card:hover,
+      .education-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(96, 165, 250, 0.72);
+        background: #1e293b;
+        box-shadow: 0 24px 54px rgba(0, 0, 0, 0.34);
+      }
+
+      .card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .index {
+        color: var(--accent);
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .project-card h3,
+      .archive-card h3,
+      .system-card h3,
+      .experience-card h3,
+      .education-card h3 {
+        margin: 8px 0 0;
+        color: var(--ink);
+        font-size: 28px;
+        line-height: 1.22;
+      }
+
+      .project-card p,
+      .archive-card p,
+      .system-card p,
+      .experience-card p,
+      .education-card p {
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.7;
+      }
+
+      .arrow {
+        width: 44px;
+        height: 44px;
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--accent-strong);
+        color: #eff6ff;
+        font-size: 23px;
+        line-height: 1;
+      }
+
+      .repo-skills {
+        margin-top: 22px;
+      }
+
+      .repo-skill {
+        border-radius: 8px;
+        background: rgba(37, 99, 235, 0.88);
+        color: #eff6ff;
+        font-size: 14px;
+      }
+
+      .archive-grid,
+      .systems-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .archive-card,
+      .system-card {
+        padding: 24px;
+      }
+
+      .archive-card h3,
+      .system-card h3 {
+        font-size: 21px;
+      }
+
+      .archive-card p,
+      .system-card p {
+        font-size: 15px;
+      }
+
+      .timeline {
+        position: relative;
+        display: grid;
+        gap: 34px;
+      }
+
+      .experience-card {
+        position: relative;
+        background: var(--card);
+      }
+
+      .experience-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        color: var(--soft-muted);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .experience-card h3 {
+        margin-top: 14px;
+      }
+
+      .company {
+        color: var(--accent);
+      }
+
+      .experience-card ul {
+        display: grid;
+        gap: 10px;
+        margin: 20px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .experience-card li {
+        position: relative;
+        padding-left: 20px;
+        color: var(--muted);
         font-size: 16px;
         line-height: 1.65;
       }
-      .links {
+
+      .experience-card li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 11px;
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      .footer {
         display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 28px;
+        justify-content: space-between;
+        gap: 20px;
+        width: min(1220px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 42px 0 56px;
+        color: var(--soft-muted);
+        font-size: 14px;
       }
-      a {
-        display: inline-flex;
-        align-items: center;
-        border: 1px solid #d7deea;
-        border-radius: 8px;
-        background: #fff;
-        color: #0f5bd7;
-        font-weight: 600;
-        padding: 10px 14px;
-        text-decoration: none;
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
-      a:hover {
-        border-color: #9ab5e5;
+
+      @keyframes cursorBlink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+
+      @media (max-width: 900px) {
+        :root {
+          scroll-padding-top: 112px;
+        }
+
+        .site-nav {
+          justify-content: flex-start;
+          background: rgba(2, 6, 23, 0.96);
+        }
+
+        .site-nav ul {
+          justify-content: flex-start;
+          flex-wrap: wrap;
+          gap: 14px 20px;
+        }
+
+        .hero {
+          min-height: auto;
+          display: block;
+        }
+
+        .hero-inner {
+          width: min(100% - 40px, 1220px);
+          padding: 118px 0 44px;
+        }
+
+        .hero-actions {
+          position: static;
+          width: min(100% - 40px, 1220px);
+          margin: 0 auto;
+          padding: 0 0 46px;
+        }
+
+        .section-grid {
+          grid-template-columns: 1fr;
+          gap: 30px;
+        }
+
+        .section {
+          padding: 58px 20px;
+        }
+      }
+
+      @media (max-width: 620px) {
+        :root {
+          scroll-padding-top: 0;
+        }
+
+        .site-nav {
+          display: none;
+          padding: 15px 16px;
+        }
+
+        .site-nav ul {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          width: 100%;
+          gap: 12px;
+        }
+
+        .site-nav a {
+          font-size: 13px;
+          line-height: 1.35;
+        }
+
+        .hero-inner,
+        .hero-actions,
+        .footer {
+          width: min(100% - 28px, 1220px);
+        }
+
+        .hero-inner {
+          padding-top: 56px;
+        }
+
+        h1 {
+          font-size: clamp(40px, 13vw, 64px);
+        }
+
+        .hero-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px 18px;
+        }
+
+        .hero-actions a {
+          white-space: nowrap;
+        }
+
+        .section-heading h2 {
+          font-size: clamp(34px, 12vw, 54px);
+        }
+
+        .project-card,
+        .archive-card,
+        .system-card,
+        .experience-card,
+        .education-card {
+          border-radius: 14px;
+          padding: 20px;
+        }
+
+        .archive-grid,
+        .systems-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .card-top {
+          align-items: center;
+        }
+
+        .arrow {
+          width: 38px;
+          height: 38px;
+        }
+
+        .experience-meta,
+        .footer {
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .site-nav ul {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .hello {
+          font-size: 24px;
+        }
+
+        .lead,
+        .title {
+          font-size: 17px;
+        }
       }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Abhiy Projects</h1>
-      <p>
-        LeetDrill is a focused LeetCode practice tracker for daily sessions,
-        solved-problem sync, and review planning.
-      </p>
-      <div class="links">
-        <a href="https://abhiy.xyz/leetdrill">Open LeetDrill</a>
-        <a href="https://github.com/abhinav-yadav-official/leetdrill">GitHub</a>
-      </div>
-    </main>
+    <div class="devportfolio-inspired">
+      <nav class="site-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#about">About</a></li>
+          <li><a href="#projects">Projects</a></li>
+          <li><a href="#archive">Archive</a></li>
+          <li><a href="#experience">Experience</a></li>
+          <li><a href="#education">Education</a></li>
+        </ul>
+      </nav>
+
+      <main>
+        <section class="hero" id="hero" aria-labelledby="intro-title">
+          <svg class="hero-pattern" aria-hidden="true">
+            <defs>
+              <pattern id="hero-grid" x="50%" y="-1" width="200" height="200" patternUnits="userSpaceOnUse">
+                <path d="M.5 200V.5H200" fill="none"></path>
+              </pattern>
+              <pattern id="programming-symbols" x="0" y="0" width="400" height="400" patternUnits="userSpaceOnUse">
+                <text class="programming-symbols" x="50" y="50" font-family="monospace" font-size="24" transform="rotate(-15)">&lt;/&gt;</text>
+                <text class="programming-symbols" x="150" y="100" font-family="monospace" font-size="20" transform="rotate(10)">{}</text>
+                <text class="programming-symbols" x="250" y="80" font-family="monospace" font-size="18" transform="rotate(-5)">=&gt;</text>
+                <text class="programming-symbols" x="100" y="200" font-family="monospace" font-size="22" transform="rotate(15)">[]</text>
+                <text class="programming-symbols" x="300" y="180" font-family="monospace" font-size="20" transform="rotate(-10)">&lt;&gt;</text>
+                <text class="programming-symbols" x="200" y="250" font-family="monospace" font-size="24" transform="rotate(5)">()</text>
+                <text class="programming-symbols" x="50" y="320" font-family="monospace" font-size="18" transform="rotate(-8)">::</text>
+                <text class="programming-symbols" x="350" y="300" font-family="monospace" font-size="22" transform="rotate(12)">==</text>
+              </pattern>
+            </defs>
+            <rect fill="url(#programming-symbols)" width="100%" height="100%"></rect>
+            <rect fill="url(#hero-grid)" width="100%" height="100%" stroke-width="0"></rect>
+          </svg>
+          <div class="hero-inner">
+            <div class="hero-copy">
+              <p class="hello typing-line typing-cursor" data-text="Hello!">Hello!</p>
+              <h1 id="intro-title" class="typing-line" data-text="I'm Abhinav">I'm <span>Abhinav</span></h1>
+              <p class="title">
+                <span
+                  class="typing-line"
+                  data-text="SDE III at Instahyre. Senior backend engineer building reliable systems, async workflows, search and caching layers, and practical tools."
+                >SDE III at Instahyre. Senior backend engineer building reliable systems, async workflows, search and caching layers, and practical tools.</span>
+              </p>
+            </div>
+          </div>
+          <div class="hero-actions" aria-label="Profile links">
+            <a href="/resume">Resume</a>
+            <a href="mailto:abhi.ay.in@gmail.com">Email</a>
+            <a href="/linkedin">LinkedIn</a>
+            <a href="/github">GitHub</a>
+            <a href="https://abhiyadav.in/leetdrill">LeetDrill</a>
+          </div>
+        </section>
+
+        <section class="section" id="about" aria-labelledby="about-title">
+          <div class="section-grid">
+            <div class="section-heading">
+              <h2 id="about-title">About Me</h2>
+              <div class="heading-rule"></div>
+            </div>
+            <div class="content-stack">
+              <p class="lead">
+                Senior backend engineer focused on correctness, performance, and production safety.
+                I work on domains where application logic meets infrastructure: ranking, search,
+                queues, caching, data migrations, observability, and secure operational access.
+              </p>
+              <div class="skills" aria-label="Technical skills">
+                <span class="skill">Python</span>
+                <span class="skill">Go</span>
+                <span class="skill">Django</span>
+                <span class="skill">Celery</span>
+                <span class="skill">RabbitMQ</span>
+                <span class="skill">MySQL</span>
+                <span class="skill">Redis</span>
+                <span class="skill">Elasticsearch</span>
+                <span class="skill">OpenSearch</span>
+                <span class="skill">AWS</span>
+                <span class="skill">Datadog</span>
+                <span class="skill">CloudWatch</span>
+                <span class="skill">Sentry</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="projects" aria-labelledby="projects-title">
+          <div class="section-grid">
+            <div class="section-heading">
+              <h2 id="projects-title">Projects</h2>
+              <div class="heading-rule"></div>
+            </div>
+            <div class="content-stack">
+              <a class="project-card" href="https://abhiyadav.in/leetdrill">
+                <div class="card-top">
+                  <div>
+                    <span class="index">01</span>
+                    <h3>LeetDrill</h3>
+                  </div>
+                  <span class="arrow" aria-hidden="true">↗</span>
+                </div>
+                <p>
+                  Self-hosted LeetCode practice tracker with catalog import, browser-extension
+                  submission capture, and a daily queue for due, unsolved, and learning problems.
+                </p>
+                <div class="repo-skills">
+                  <span class="repo-skill">Go</span>
+                  <span class="repo-skill">Postgres</span>
+                  <span class="repo-skill">Browser Extension</span>
+                </div>
+              </a>
+              <a class="card-link" href="https://github.com/abhinav-yadav-official/leetdrill">View LeetDrill source</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="systems" aria-labelledby="systems-title">
+          <div class="section-grid">
+            <div class="section-heading">
+              <h2 id="systems-title">Systems I work on</h2>
+              <div class="heading-rule"></div>
+            </div>
+            <div class="systems-grid">
+              <article class="system-card">
+                <h3>Ranking and search</h3>
+                <p>Opportunity calculation, Elasticsearch/OpenSearch alignment, and consistency checks.</p>
+              </article>
+              <article class="system-card">
+                <h3>Async workflows</h3>
+                <p>Celery and RabbitMQ pipelines, retry behavior, queue isolation, and long-running tasks.</p>
+              </article>
+              <article class="system-card">
+                <h3>Caching</h3>
+                <p>Redis hot paths, TTL design, invalidation boundaries, and connection reuse.</p>
+              </article>
+              <article class="system-card">
+                <h3>Migrations</h3>
+                <p>Schema changes, index rebuilds, backfills, feature flags, and zero-downtime cutovers.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="archive" aria-labelledby="archive-title">
+          <div class="section-grid">
+            <div class="section-heading">
+              <h2 id="archive-title">Project archive</h2>
+              <div class="heading-rule"></div>
+            </div>
+            <div class="archive-grid">
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/manager.ai">
+                <h3>manager.ai</h3>
+                <p>Generates quarterly developer evaluations from Phabricator data.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/legacy-mac-wheels">
+                <h3>legacy-mac-wheels</h3>
+                <p>Static package index for Python wheels on older macOS development machines.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/homebrew-legacy">
+                <h3>homebrew-legacy</h3>
+                <p>Homebrew tap for bootstrapping and maintaining legacy environments.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/dotfiles">
+                <h3>dotfiles</h3>
+                <p>Shell-based local setup and development environment configuration.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/register-page">
+                <h3>register-page</h3>
+                <p>PHP and MySQL login/register pages, an older public repo with auth basics.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/object-detect">
+                <h3>object-detect</h3>
+                <p>JavaScript object-detection experiment.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/doc-scan">
+                <h3>doc-scan</h3>
+                <p>React and Express app that converts images to text using Tesseract.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/mern-user-authentication">
+                <h3>mern-user-authentication</h3>
+                <p>User authentication single-page app using the MERN stack.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/angular-freehand-drawing-app">
+                <h3>angular-freehand-drawing-app</h3>
+                <p>Angular drawing app for freehand canvas input.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/keras-flask-app">
+                <h3>keras-flask-app</h3>
+                <p>Flask app that classifies digits drawn on a web canvas using a Keras model.</p>
+              </a>
+              <a class="archive-card" href="https://github.com/abhinav-yadav-official/react-clock-app">
+                <h3>react-clock-app</h3>
+                <p>Small analog clock interface built with React.</p>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="experience" aria-labelledby="experience-title">
+          <div class="section-grid">
+            <div class="section-heading">
+              <h2 id="experience-title">Experience</h2>
+              <div class="heading-rule"></div>
+            </div>
+            <div class="timeline">
+              <article class="experience-card">
+                <div class="experience-meta">
+                  <span class="company">Instahyre</span>
+                  <span>2024 - Present</span>
+                </div>
+                <h3>SDE III</h3>
+                <ul>
+                  <li>Own backend domains around opportunity calculation, candidate visibility, recruiter workflows, and background processing.</li>
+                  <li>Drive production rollouts involving search index changes, schema migrations, data backfills, and feature-flagged cutovers.</li>
+                  <li>Review performance-sensitive, security-critical, and data-integrity-impacting backend changes.</li>
+                </ul>
+              </article>
+              <article class="experience-card">
+                <div class="experience-meta">
+                  <span class="company">Instahyre</span>
+                  <span>2022 - 2024</span>
+                </div>
+                <h3>Senior Software Engineer</h3>
+                <ul>
+                  <li>Improved high-traffic systems across search, candidates, jobs, and opportunities.</li>
+                  <li>Designed Redis caching with TTLs, safe invalidation, and connection reuse for hot APIs.</li>
+                  <li>Debugged production issues involving RDS replica lag, deadlocks, CPU spikes, and lock contention.</li>
+                </ul>
+              </article>
+              <article class="experience-card">
+                <div class="experience-meta">
+                  <span class="company">Instahyre</span>
+                  <span>2019 - 2022</span>
+                </div>
+                <h3>Software Engineer</h3>
+                <ul>
+                  <li>Built employer team management with RBAC, auditability, and impersonation safety.</li>
+                  <li>Fixed authorization bypasses protecting premium features at API and UI layers.</li>
+                  <li>Integrated Datadog and Sentry with Celery for production observability and async error tracking.</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="education" aria-labelledby="education-title">
+          <div class="section-grid">
+            <div class="section-heading">
+              <h2 id="education-title">Education</h2>
+              <div class="heading-rule"></div>
+            </div>
+            <article class="education-card">
+              <div class="experience-meta">
+                <span class="company">AKTU</span>
+                <span>2015 - 2019</span>
+              </div>
+              <h3>B.Tech, Computer Science</h3>
+              <p>
+                Undergraduate computer science foundation before moving into backend product
+                engineering, production systems, and infrastructure-adjacent reliability work.
+              </p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>Abhinav · Backend engineer</span>
+        <a href="mailto:abhi.ay.in@gmail.com">abhi.ay.in@gmail.com</a>
+      </footer>
+    </div>
+    <script>
+      (() => {
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (prefersReducedMotion) {
+          return;
+        }
+
+        const lines = Array.from(document.querySelectorAll(".typing-line[data-text]"));
+        if (!lines.length) {
+          return;
+        }
+
+        const clearLine = (line) => {
+          if (line.id === "intro-title") {
+            line.textContent = "";
+          } else {
+            line.textContent = "";
+          }
+          line.classList.remove("typing-cursor");
+        };
+
+        const typeHeroLine = (line, text, speed) => new Promise((resolve) => {
+          let index = 0;
+          line.classList.add("typing-cursor");
+          const tick = () => {
+            line.textContent = text.slice(0, index);
+            index += 1;
+            if (index <= text.length) {
+              window.setTimeout(tick, speed);
+              return;
+            }
+            window.setTimeout(() => {
+              if (line.id === "intro-title") {
+                line.innerHTML = "I'm <span>Abhinav</span>";
+              }
+              line.classList.remove("typing-cursor");
+              resolve();
+            }, 220);
+          };
+          tick();
+        });
+
+        const runTyping = async () => {
+          lines.forEach(clearLine);
+          for (const line of lines) {
+            const text = line.dataset.text || "";
+            const speed = text.length > 60 ? 16 : 34;
+            await typeHeroLine(line, text, speed);
+          }
+          lines[lines.length - 1].classList.add("typing-cursor");
+        };
+
+        runTyping();
+      })();
+    </script>
   </body>
 </html>

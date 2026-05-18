@@ -19,7 +19,7 @@ const COOKIE_ALARM = "leetdrill-cookie-sync";
 const COOKIE_PERIOD_MIN = 6 * 60; // 6 hours
 
 const DEFAULTS = {
-  backendUrl: "https://abhiy.xyz/leetdrill",
+  backendUrl: "https://abhiyadav.in/leetdrill",
   token: ""
 };
 
@@ -154,7 +154,7 @@ function isTrustedExtensionConnectSender(sender) {
       "";
     const url = new URL(rawURL);
     return url.protocol === "https:" &&
-      url.hostname === "abhiy.xyz" &&
+      url.hostname === "abhiyadav.in" &&
       url.pathname === "/leetdrill/extension/connect";
   } catch (_) {
     return false;
@@ -259,7 +259,7 @@ async function handshake({ email, password } = {}) {
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     if (!email && !password && !foundWebSession && res.status === 400) {
-      throw new Error("no LeetDrill login cookie found; open https://abhiy.xyz/leetdrill in this same browser profile, sign in, then retry");
+      throw new Error("no LeetDrill login cookie found; open https://abhiyadav.in/leetdrill in this same browser profile, sign in, then retry");
     }
     throw new Error(`handshake HTTP ${res.status}${text ? `: ${text}` : ""}`);
   }

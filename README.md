@@ -4,7 +4,7 @@ LeetDrill is a self-hosted LeetCode practice tracker. It imports the LeetCode
 catalog, captures your accepted submissions through a browser extension, and
 keeps a daily practice queue based on what is due, unsolved, or needs more work.
 
-Production: https://abhiy.xyz/leetdrill
+Production: https://abhiyadav.in/leetdrill
 
 ## Development
 
@@ -35,7 +35,7 @@ runs migrations, installs the systemd service, checks nginx, verifies HTTPS, and
 publishes extension downloads.
 
 ```sh
-task deploy:server -- abhiy.xyz
+task deploy:server -- abhiyadav.in
 ```
 
 First-run example:

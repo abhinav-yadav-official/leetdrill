@@ -49,7 +49,7 @@
     });
   }
 
-  if (window.location.hostname === "abhiy.xyz" &&
+  if (window.location.hostname === "abhiyadav.in" &&
       window.location.pathname === "/leetdrill/extension/connect") {
     handleExtensionConnectPage();
     return;

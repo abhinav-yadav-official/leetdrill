@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HOST="${1:-${HOST:-abhiy.xyz}}"
+HOST="${1:-${HOST:-abhiyadav.in}}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 DOMAIN="${DOMAIN:-$HOST}"
@@ -293,11 +293,12 @@ if [ "$DEPLOY_EXTENSION" = true ]; then
   rsync -az --delete "$ROOT/dist/extension-share"/ "$HOST:$SHARED_DIR"/
 fi
 
-if [ -f "$ROOT/web/homepage/index.html" ]; then
+if [ -d "$ROOT/web/homepage" ]; then
   python3 "$ROOT/scripts/check_homepage.py"
-  tmp_home="/tmp/leetdrill-homepage-index.html"
-  rsync -az "$ROOT/web/homepage/index.html" "$HOST:$tmp_home"
-  ssh "$HOST" "sudo install -m 0644 $(quote "$tmp_home") /var/www/html/index.html && rm -f $(quote "$tmp_home")"
+  tmp_home="/tmp/leetdrill-homepage"
+  ssh "$HOST" "rm -rf $(quote "$tmp_home") && mkdir -p $(quote "$tmp_home")"
+  rsync -az --delete "$ROOT/web/homepage"/ "$HOST:$tmp_home"/
+  ssh "$HOST" "sudo rsync -a --delete --exclude=shared/ $(quote "$tmp_home")/ /var/www/html/ && rm -rf $(quote "$tmp_home")"
 fi
 
 scheme="https"
@@ -306,11 +307,11 @@ if [ "$ENABLE_TLS" = false ]; then
 fi
 
 curl -fsS "$scheme://$DOMAIN$BASE_PATH/healthz" >/dev/null
-if [ -f "$ROOT/web/homepage/index.html" ]; then
+if [ -d "$ROOT/web/homepage" ]; then
   curl -fsS "$scheme://$DOMAIN/" >/dev/null
 fi
 echo "deployed: $scheme://$DOMAIN$BASE_PATH/"
-if [ -f "$ROOT/web/homepage/index.html" ]; then
+if [ -d "$ROOT/web/homepage" ]; then
   echo "homepage: $scheme://$DOMAIN/"
 fi
 if [ "$DEPLOY_EXTENSION" = true ]; then
