@@ -3,6 +3,7 @@ from collections import defaultdict
 from html.parser import HTMLParser
 from pathlib import Path
 import re
+import time
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 
@@ -133,16 +134,22 @@ class NoRedirectHandler(HTTPRedirectHandler):
 def require_redirect(url, location):
     opener = build_opener(NoRedirectHandler)
     request = Request(url, method="HEAD")
-    try:
-        opener.open(request, timeout=10)
-    except Exception as exc:
-        response = getattr(exc, "headers", {})
-        code = getattr(exc, "code", None)
-        actual_location = response.get("Location")
-        require(code in (301, 308), f"{url} must return permanent redirect, got {code}")
-        require(actual_location == location, f"{url} must redirect to {location}, got {actual_location}")
-        return
-    raise SystemExit(f"{url} must redirect to {location}")
+    last_error = None
+    for _ in range(3):
+        try:
+            opener.open(request, timeout=10)
+        except Exception as exc:
+            response = getattr(exc, "headers", {})
+            code = getattr(exc, "code", None)
+            actual_location = response.get("Location")
+            if code in (301, 308) and actual_location == location:
+                return
+            last_error = f"{url} returned {code} with Location {actual_location}"
+            time.sleep(0.5)
+            continue
+        last_error = f"{url} did not redirect"
+        time.sleep(0.5)
+    require(False, last_error or f"{url} must redirect to {location}")
 
 
 def main():
