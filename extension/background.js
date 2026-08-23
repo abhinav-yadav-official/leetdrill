@@ -199,7 +199,7 @@ async function openApp() {
 }
 
 async function openGithub() {
-  const url = "https://github.com/abhinav-yadav-official/LeetDrill";
+  const url = "https://github.com/almostturingcomplete/LeetDrill";
   await ldx.tabs.create({ url });
   return { url };
 }

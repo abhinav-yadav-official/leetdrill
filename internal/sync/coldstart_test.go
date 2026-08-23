@@ -34,7 +34,7 @@ func TestColdStartDueAtSpreadsRecentProblems(t *testing.T) {
 
 func TestColdStartNeedsCookiesWhenPublicRecentIsEmpty(t *testing.T) {
 	result := ColdStartResult{
-		Username:      "abhinav-yadav-official",
+		Username:      "almostturingcomplete",
 		PublicSolved:  141,
 		AuthedSkipped: true,
 	}

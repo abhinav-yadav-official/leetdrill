@@ -180,7 +180,7 @@ func TestSettingsPageIncludesExtensionPanel(t *testing.T) {
 		UserID:  7,
 		NavItem: "settings",
 		Data: map[string]string{
-			"Username":        "abhinav-yadav-official",
+			"Username":        "almostturingcomplete",
 			"CookieStatus":    "cookies stored and valid",
 			"CookieUpdatedAt": "",
 		},
